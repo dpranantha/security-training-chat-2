@@ -1,0 +1,1031 @@
+diff -Nuwr chat-1/src/main/java/org/certifiedsecure/chat/persistence/model/Message.java chat-2/src/main/java/org/certifiedsecure/chat/persistence/model/Message.java
+--- chat-1/src/main/java/org/certifiedsecure/chat/persistence/model/Message.java
++++ chat-2/src/main/java/org/certifiedsecure/chat/persistence/model/Message.java
+@@ -39,7 +39,7 @@
+ 	private String message;
+ 
+ 	public String getMessage() {
+-		return message;
++		return message.replaceAll(":([^:]*):", "<img class=emoji src=/static/emoji/$1.png>");
+ 	}
+ 
+ 	private Timestamp date;
+diff -Nuwr chat-1/src/main/java/org/certifiedsecure/chat/web/MessageController.java chat-2/src/main/java/org/certifiedsecure/chat/web/MessageController.java
+--- chat-1/src/main/java/org/certifiedsecure/chat/web/MessageController.java
++++ chat-2/src/main/java/org/certifiedsecure/chat/web/MessageController.java
+@@ -15,6 +15,7 @@
+ import org.springframework.web.bind.annotation.RequestMethod;
+ import org.springframework.web.bind.annotation.RequestParam;
+ import org.springframework.web.bind.annotation.RestController;
++import org.springframework.web.util.HtmlUtils;
+ 
+ /**
+  * Controller for /message
+@@ -47,6 +48,7 @@
+ 	public Message addMessage(@AuthenticationPrincipal ChatUserPrincipal principal,
+ 			@RequestParam("channel") Long channel_id, @RequestParam("message") String message_text) {
+ 		Channel channel = channelRepository.findOne(channel_id);
++		message_text = HtmlUtils.htmlEscape(message_text);
+ 		Message message = new Message(channel, principal.getUser(), message_text,
+ 				new Timestamp(System.currentTimeMillis()));
+ 		message = messageRepository.save(message);
+diff -Nuwr chat-1/src/main/resources/messages.properties chat-2/src/main/resources/messages.properties
+--- chat-1/src/main/resources/messages.properties
++++ chat-2/src/main/resources/messages.properties
+@@ -4,4 +4,7 @@
+ chat.channels.title=Channels
+ chat.message_placeholder=Type a message ...
+ chat.message_send=GO
++chat.help=HELP
+ security_error_access_denied=Access denied
++help.title=HELP
++help.text=<p>Supported markup:</p><p><strong>Emoji</strong>: use <em>:name:</em> to include emoji. For example, <em>:birthday:</em>.</p>
+diff -Nuwr chat-1/src/main/resources/static/application.css chat-2/src/main/resources/static/application.css
+--- chat-1/src/main/resources/static/application.css
++++ chat-2/src/main/resources/static/application.css
+@@ -273,3 +273,26 @@
+   src: url("/static/opensans-light.ttf");
+   font-weight: normal;
+   font-style: normal; }
++img.emoji {
++  height: 32px; }
++
++div.chat div.extra {
++  position: absolute;
++  width: 883px;
++  text-align: center;
++  bottom: -50px;
++  text-transform: uppercase; }
++  div.chat div.extra a {
++    color: #e1d070;
++    text-decoration: none;
++    font-size: 12px;
++    padding-left: 30px;
++    margin-right: 15px;
++    display: inline-block;
++    height: 33px;
++    line-height: 25px;
++    background-repeat: no-repeat;
++    background-position: left;
++    background-image: url("/static/knot_small.png"); }
++    div.chat div.extra a:hover {
++      color: white; }
+diff -Nuwr chat-1/src/main/resources/static/application.js chat-2/src/main/resources/static/application.js
+--- chat-1/src/main/resources/static/application.js
++++ chat-2/src/main/resources/static/application.js
+@@ -168,6 +168,11 @@
+         $("div#overlay").addClass("active");
+     }
+ 
++    if(ui.state == "help") {
++        $("div.container.help").show();
++        $("div#overlay").addClass("active");
++    }
++
+     if(ui.state == "chat") {
+         $("div.container.chat").show();
+         $("form.message_form input[name='message']").focus();
+@@ -376,6 +381,39 @@
+     return false;
+ };
+ 
++UI.prototype.handle_overlay_click = function(event) {
++    event.preventDefault();
++    event.stopPropagation();
++
++    if(ui.state == "help") {
++        ui.state = "chat";
++        ui.draw();
++    }
++        
++    return false;
++};
++
++UI.prototype.handle_overlay_key = function(event) {
++    event.preventDefault();
++    event.stopPropagation();
++
++    if(event.keyCode == 0x1b && (ui.state == "help")) {
++        ui.state = "chat";
++        ui.draw();
++    }
++        
++    return false;
++};
++
++UI.prototype.handle_help_link = function(event) {
++    event.preventDefault();
++
++    ui.state = "help";
++    ui.draw();
++
++    return false;
++};
++
+ var init = function() {
+     // do a full setup of our user interface, removing loaders etc
+     // and start loading our channels
+@@ -383,6 +421,12 @@
+ 
+     $("form.message_form").on("submit", ui.handle_message_form);
+ 
++    $("a.help").on("click", ui.handle_help_link);
++
++    $("div#overlay").on("click", ui.handle_overlay_click);
++
++    $(document).on("keyup", ui.handle_overlay_key);
++
+     ui.init();
+ };
+ 
+Binary files chat-1/src/main/resources/static/emoji/100.png and chat-2/src/main/resources/static/emoji/100.png differ
+Binary files chat-1/src/main/resources/static/emoji/109.png and chat-2/src/main/resources/static/emoji/109.png differ
+Binary files chat-1/src/main/resources/static/emoji/1234.png and chat-2/src/main/resources/static/emoji/1234.png differ
+Binary files chat-1/src/main/resources/static/emoji/-1.png and chat-2/src/main/resources/static/emoji/-1.png differ
+Binary files chat-1/src/main/resources/static/emoji/+1.png and chat-2/src/main/resources/static/emoji/+1.png differ
+Binary files chat-1/src/main/resources/static/emoji/8ball.png and chat-2/src/main/resources/static/emoji/8ball.png differ
+Binary files chat-1/src/main/resources/static/emoji/abcd.png and chat-2/src/main/resources/static/emoji/abcd.png differ
+Binary files chat-1/src/main/resources/static/emoji/abc.png and chat-2/src/main/resources/static/emoji/abc.png differ
+Binary files chat-1/src/main/resources/static/emoji/ab.png and chat-2/src/main/resources/static/emoji/ab.png differ
+Binary files chat-1/src/main/resources/static/emoji/accept.png and chat-2/src/main/resources/static/emoji/accept.png differ
+Binary files chat-1/src/main/resources/static/emoji/aerial_tramway.png and chat-2/src/main/resources/static/emoji/aerial_tramway.png differ
+Binary files chat-1/src/main/resources/static/emoji/airplane.png and chat-2/src/main/resources/static/emoji/airplane.png differ
+Binary files chat-1/src/main/resources/static/emoji/alarm_clock.png and chat-2/src/main/resources/static/emoji/alarm_clock.png differ
+Binary files chat-1/src/main/resources/static/emoji/alien.png and chat-2/src/main/resources/static/emoji/alien.png differ
+Binary files chat-1/src/main/resources/static/emoji/ambulance.png and chat-2/src/main/resources/static/emoji/ambulance.png differ
+Binary files chat-1/src/main/resources/static/emoji/anchor.png and chat-2/src/main/resources/static/emoji/anchor.png differ
+Binary files chat-1/src/main/resources/static/emoji/angel.png and chat-2/src/main/resources/static/emoji/angel.png differ
+Binary files chat-1/src/main/resources/static/emoji/anger.png and chat-2/src/main/resources/static/emoji/anger.png differ
+Binary files chat-1/src/main/resources/static/emoji/angry.png and chat-2/src/main/resources/static/emoji/angry.png differ
+Binary files chat-1/src/main/resources/static/emoji/anguished.png and chat-2/src/main/resources/static/emoji/anguished.png differ
+Binary files chat-1/src/main/resources/static/emoji/ant.png and chat-2/src/main/resources/static/emoji/ant.png differ
+Binary files chat-1/src/main/resources/static/emoji/a.png and chat-2/src/main/resources/static/emoji/a.png differ
+Binary files chat-1/src/main/resources/static/emoji/apple.png and chat-2/src/main/resources/static/emoji/apple.png differ
+Binary files chat-1/src/main/resources/static/emoji/aquarius.png and chat-2/src/main/resources/static/emoji/aquarius.png differ
+Binary files chat-1/src/main/resources/static/emoji/aries.png and chat-2/src/main/resources/static/emoji/aries.png differ
+Binary files chat-1/src/main/resources/static/emoji/arrow_backward.png and chat-2/src/main/resources/static/emoji/arrow_backward.png differ
+Binary files chat-1/src/main/resources/static/emoji/arrow_double_down.png and chat-2/src/main/resources/static/emoji/arrow_double_down.png differ
+Binary files chat-1/src/main/resources/static/emoji/arrow_double_up.png and chat-2/src/main/resources/static/emoji/arrow_double_up.png differ
+Binary files chat-1/src/main/resources/static/emoji/arrow_down.png and chat-2/src/main/resources/static/emoji/arrow_down.png differ
+Binary files chat-1/src/main/resources/static/emoji/arrow_down_small.png and chat-2/src/main/resources/static/emoji/arrow_down_small.png differ
+Binary files chat-1/src/main/resources/static/emoji/arrow_forward.png and chat-2/src/main/resources/static/emoji/arrow_forward.png differ
+Binary files chat-1/src/main/resources/static/emoji/arrow_heading_down.png and chat-2/src/main/resources/static/emoji/arrow_heading_down.png differ
+Binary files chat-1/src/main/resources/static/emoji/arrow_heading_up.png and chat-2/src/main/resources/static/emoji/arrow_heading_up.png differ
+Binary files chat-1/src/main/resources/static/emoji/arrow_left.png and chat-2/src/main/resources/static/emoji/arrow_left.png differ
+Binary files chat-1/src/main/resources/static/emoji/arrow_lower_left.png and chat-2/src/main/resources/static/emoji/arrow_lower_left.png differ
+Binary files chat-1/src/main/resources/static/emoji/arrow_lower_right.png and chat-2/src/main/resources/static/emoji/arrow_lower_right.png differ
+Binary files chat-1/src/main/resources/static/emoji/arrow_right_hook.png and chat-2/src/main/resources/static/emoji/arrow_right_hook.png differ
+Binary files chat-1/src/main/resources/static/emoji/arrow_right.png and chat-2/src/main/resources/static/emoji/arrow_right.png differ
+Binary files chat-1/src/main/resources/static/emoji/arrows_clockwise.png and chat-2/src/main/resources/static/emoji/arrows_clockwise.png differ
+Binary files chat-1/src/main/resources/static/emoji/arrows_counterclockwise.png and chat-2/src/main/resources/static/emoji/arrows_counterclockwise.png differ
+Binary files chat-1/src/main/resources/static/emoji/arrow_up_down.png and chat-2/src/main/resources/static/emoji/arrow_up_down.png differ
+Binary files chat-1/src/main/resources/static/emoji/arrow_upper_left.png and chat-2/src/main/resources/static/emoji/arrow_upper_left.png differ
+Binary files chat-1/src/main/resources/static/emoji/arrow_upper_right.png and chat-2/src/main/resources/static/emoji/arrow_upper_right.png differ
+Binary files chat-1/src/main/resources/static/emoji/arrow_up.png and chat-2/src/main/resources/static/emoji/arrow_up.png differ
+Binary files chat-1/src/main/resources/static/emoji/arrow_up_small.png and chat-2/src/main/resources/static/emoji/arrow_up_small.png differ
+Binary files chat-1/src/main/resources/static/emoji/articulated_lorry.png and chat-2/src/main/resources/static/emoji/articulated_lorry.png differ
+Binary files chat-1/src/main/resources/static/emoji/art.png and chat-2/src/main/resources/static/emoji/art.png differ
+Binary files chat-1/src/main/resources/static/emoji/astonished.png and chat-2/src/main/resources/static/emoji/astonished.png differ
+Binary files chat-1/src/main/resources/static/emoji/atm.png and chat-2/src/main/resources/static/emoji/atm.png differ
+Binary files chat-1/src/main/resources/static/emoji/baby_bottle.png and chat-2/src/main/resources/static/emoji/baby_bottle.png differ
+Binary files chat-1/src/main/resources/static/emoji/baby_chick.png and chat-2/src/main/resources/static/emoji/baby_chick.png differ
+Binary files chat-1/src/main/resources/static/emoji/baby.png and chat-2/src/main/resources/static/emoji/baby.png differ
+Binary files chat-1/src/main/resources/static/emoji/baby_symbol.png and chat-2/src/main/resources/static/emoji/baby_symbol.png differ
+Binary files chat-1/src/main/resources/static/emoji/baggage_claim.png and chat-2/src/main/resources/static/emoji/baggage_claim.png differ
+Binary files chat-1/src/main/resources/static/emoji/balloon.png and chat-2/src/main/resources/static/emoji/balloon.png differ
+Binary files chat-1/src/main/resources/static/emoji/ballot_box_with_check.png and chat-2/src/main/resources/static/emoji/ballot_box_with_check.png differ
+Binary files chat-1/src/main/resources/static/emoji/bamboo.png and chat-2/src/main/resources/static/emoji/bamboo.png differ
+Binary files chat-1/src/main/resources/static/emoji/banana.png and chat-2/src/main/resources/static/emoji/banana.png differ
+Binary files chat-1/src/main/resources/static/emoji/bangbang.png and chat-2/src/main/resources/static/emoji/bangbang.png differ
+Binary files chat-1/src/main/resources/static/emoji/bank.png and chat-2/src/main/resources/static/emoji/bank.png differ
+Binary files chat-1/src/main/resources/static/emoji/barber.png and chat-2/src/main/resources/static/emoji/barber.png differ
+Binary files chat-1/src/main/resources/static/emoji/bar_chart.png and chat-2/src/main/resources/static/emoji/bar_chart.png differ
+Binary files chat-1/src/main/resources/static/emoji/baseball.png and chat-2/src/main/resources/static/emoji/baseball.png differ
+Binary files chat-1/src/main/resources/static/emoji/basketball.png and chat-2/src/main/resources/static/emoji/basketball.png differ
+Binary files chat-1/src/main/resources/static/emoji/bath.png and chat-2/src/main/resources/static/emoji/bath.png differ
+Binary files chat-1/src/main/resources/static/emoji/bathtub.png and chat-2/src/main/resources/static/emoji/bathtub.png differ
+Binary files chat-1/src/main/resources/static/emoji/battery.png and chat-2/src/main/resources/static/emoji/battery.png differ
+Binary files chat-1/src/main/resources/static/emoji/bear.png and chat-2/src/main/resources/static/emoji/bear.png differ
+Binary files chat-1/src/main/resources/static/emoji/beer.png and chat-2/src/main/resources/static/emoji/beer.png differ
+Binary files chat-1/src/main/resources/static/emoji/beers.png and chat-2/src/main/resources/static/emoji/beers.png differ
+Binary files chat-1/src/main/resources/static/emoji/beetle.png and chat-2/src/main/resources/static/emoji/beetle.png differ
+Binary files chat-1/src/main/resources/static/emoji/beginner.png and chat-2/src/main/resources/static/emoji/beginner.png differ
+Binary files chat-1/src/main/resources/static/emoji/bell.png and chat-2/src/main/resources/static/emoji/bell.png differ
+Binary files chat-1/src/main/resources/static/emoji/bento.png and chat-2/src/main/resources/static/emoji/bento.png differ
+Binary files chat-1/src/main/resources/static/emoji/bicyclist.png and chat-2/src/main/resources/static/emoji/bicyclist.png differ
+Binary files chat-1/src/main/resources/static/emoji/bike.png and chat-2/src/main/resources/static/emoji/bike.png differ
+Binary files chat-1/src/main/resources/static/emoji/bikini.png and chat-2/src/main/resources/static/emoji/bikini.png differ
+Binary files chat-1/src/main/resources/static/emoji/bird.png and chat-2/src/main/resources/static/emoji/bird.png differ
+Binary files chat-1/src/main/resources/static/emoji/birthday.png and chat-2/src/main/resources/static/emoji/birthday.png differ
+Binary files chat-1/src/main/resources/static/emoji/black_circle.png and chat-2/src/main/resources/static/emoji/black_circle.png differ
+Binary files chat-1/src/main/resources/static/emoji/black_joker.png and chat-2/src/main/resources/static/emoji/black_joker.png differ
+Binary files chat-1/src/main/resources/static/emoji/black_nib.png and chat-2/src/main/resources/static/emoji/black_nib.png differ
+Binary files chat-1/src/main/resources/static/emoji/black_square_button.png and chat-2/src/main/resources/static/emoji/black_square_button.png differ
+Binary files chat-1/src/main/resources/static/emoji/black_square.png and chat-2/src/main/resources/static/emoji/black_square.png differ
+Binary files chat-1/src/main/resources/static/emoji/blossom.png and chat-2/src/main/resources/static/emoji/blossom.png differ
+Binary files chat-1/src/main/resources/static/emoji/blowfish.png and chat-2/src/main/resources/static/emoji/blowfish.png differ
+Binary files chat-1/src/main/resources/static/emoji/blue_book.png and chat-2/src/main/resources/static/emoji/blue_book.png differ
+Binary files chat-1/src/main/resources/static/emoji/blue_car.png and chat-2/src/main/resources/static/emoji/blue_car.png differ
+Binary files chat-1/src/main/resources/static/emoji/blue_heart.png and chat-2/src/main/resources/static/emoji/blue_heart.png differ
+Binary files chat-1/src/main/resources/static/emoji/blush.png and chat-2/src/main/resources/static/emoji/blush.png differ
+Binary files chat-1/src/main/resources/static/emoji/boar.png and chat-2/src/main/resources/static/emoji/boar.png differ
+Binary files chat-1/src/main/resources/static/emoji/boat.png and chat-2/src/main/resources/static/emoji/boat.png differ
+Binary files chat-1/src/main/resources/static/emoji/bomb.png and chat-2/src/main/resources/static/emoji/bomb.png differ
+Binary files chat-1/src/main/resources/static/emoji/bookmark.png and chat-2/src/main/resources/static/emoji/bookmark.png differ
+Binary files chat-1/src/main/resources/static/emoji/bookmark_tabs.png and chat-2/src/main/resources/static/emoji/bookmark_tabs.png differ
+Binary files chat-1/src/main/resources/static/emoji/book.png and chat-2/src/main/resources/static/emoji/book.png differ
+Binary files chat-1/src/main/resources/static/emoji/books.png and chat-2/src/main/resources/static/emoji/books.png differ
+Binary files chat-1/src/main/resources/static/emoji/boom.png and chat-2/src/main/resources/static/emoji/boom.png differ
+Binary files chat-1/src/main/resources/static/emoji/boot.png and chat-2/src/main/resources/static/emoji/boot.png differ
+Binary files chat-1/src/main/resources/static/emoji/bouquet.png and chat-2/src/main/resources/static/emoji/bouquet.png differ
+Binary files chat-1/src/main/resources/static/emoji/bowling.png and chat-2/src/main/resources/static/emoji/bowling.png differ
+Binary files chat-1/src/main/resources/static/emoji/bow.png and chat-2/src/main/resources/static/emoji/bow.png differ
+Binary files chat-1/src/main/resources/static/emoji/bowtie.png and chat-2/src/main/resources/static/emoji/bowtie.png differ
+Binary files chat-1/src/main/resources/static/emoji/boy.png and chat-2/src/main/resources/static/emoji/boy.png differ
+Binary files chat-1/src/main/resources/static/emoji/b.png and chat-2/src/main/resources/static/emoji/b.png differ
+Binary files chat-1/src/main/resources/static/emoji/bread.png and chat-2/src/main/resources/static/emoji/bread.png differ
+Binary files chat-1/src/main/resources/static/emoji/bride_with_veil.png and chat-2/src/main/resources/static/emoji/bride_with_veil.png differ
+Binary files chat-1/src/main/resources/static/emoji/bridge_at_night.png and chat-2/src/main/resources/static/emoji/bridge_at_night.png differ
+Binary files chat-1/src/main/resources/static/emoji/briefcase.png and chat-2/src/main/resources/static/emoji/briefcase.png differ
+Binary files chat-1/src/main/resources/static/emoji/broken_heart.png and chat-2/src/main/resources/static/emoji/broken_heart.png differ
+Binary files chat-1/src/main/resources/static/emoji/bug.png and chat-2/src/main/resources/static/emoji/bug.png differ
+Binary files chat-1/src/main/resources/static/emoji/bulb.png and chat-2/src/main/resources/static/emoji/bulb.png differ
+Binary files chat-1/src/main/resources/static/emoji/bullettrain_front.png and chat-2/src/main/resources/static/emoji/bullettrain_front.png differ
+Binary files chat-1/src/main/resources/static/emoji/bullettrain_side.png and chat-2/src/main/resources/static/emoji/bullettrain_side.png differ
+Binary files chat-1/src/main/resources/static/emoji/bus.png and chat-2/src/main/resources/static/emoji/bus.png differ
+Binary files chat-1/src/main/resources/static/emoji/busstop.png and chat-2/src/main/resources/static/emoji/busstop.png differ
+Binary files chat-1/src/main/resources/static/emoji/bust_in_silhouette.png and chat-2/src/main/resources/static/emoji/bust_in_silhouette.png differ
+Binary files chat-1/src/main/resources/static/emoji/busts_in_silhouette.png and chat-2/src/main/resources/static/emoji/busts_in_silhouette.png differ
+Binary files chat-1/src/main/resources/static/emoji/cactus.png and chat-2/src/main/resources/static/emoji/cactus.png differ
+Binary files chat-1/src/main/resources/static/emoji/cake.png and chat-2/src/main/resources/static/emoji/cake.png differ
+Binary files chat-1/src/main/resources/static/emoji/calendar.png and chat-2/src/main/resources/static/emoji/calendar.png differ
+Binary files chat-1/src/main/resources/static/emoji/calling.png and chat-2/src/main/resources/static/emoji/calling.png differ
+Binary files chat-1/src/main/resources/static/emoji/camel.png and chat-2/src/main/resources/static/emoji/camel.png differ
+Binary files chat-1/src/main/resources/static/emoji/camera.png and chat-2/src/main/resources/static/emoji/camera.png differ
+Binary files chat-1/src/main/resources/static/emoji/cancer.png and chat-2/src/main/resources/static/emoji/cancer.png differ
+Binary files chat-1/src/main/resources/static/emoji/candy.png and chat-2/src/main/resources/static/emoji/candy.png differ
+Binary files chat-1/src/main/resources/static/emoji/capital_abcd.png and chat-2/src/main/resources/static/emoji/capital_abcd.png differ
+Binary files chat-1/src/main/resources/static/emoji/capricorn.png and chat-2/src/main/resources/static/emoji/capricorn.png differ
+Binary files chat-1/src/main/resources/static/emoji/card_index.png and chat-2/src/main/resources/static/emoji/card_index.png differ
+Binary files chat-1/src/main/resources/static/emoji/carousel_horse.png and chat-2/src/main/resources/static/emoji/carousel_horse.png differ
+Binary files chat-1/src/main/resources/static/emoji/car.png and chat-2/src/main/resources/static/emoji/car.png differ
+Binary files chat-1/src/main/resources/static/emoji/cat2.png and chat-2/src/main/resources/static/emoji/cat2.png differ
+Binary files chat-1/src/main/resources/static/emoji/cat.png and chat-2/src/main/resources/static/emoji/cat.png differ
+Binary files chat-1/src/main/resources/static/emoji/cd.png and chat-2/src/main/resources/static/emoji/cd.png differ
+Binary files chat-1/src/main/resources/static/emoji/chart.png and chat-2/src/main/resources/static/emoji/chart.png differ
+Binary files chat-1/src/main/resources/static/emoji/chart_with_downwards_trend.png and chat-2/src/main/resources/static/emoji/chart_with_downwards_trend.png differ
+Binary files chat-1/src/main/resources/static/emoji/chart_with_upwards_trend.png and chat-2/src/main/resources/static/emoji/chart_with_upwards_trend.png differ
+Binary files chat-1/src/main/resources/static/emoji/checkered_flag.png and chat-2/src/main/resources/static/emoji/checkered_flag.png differ
+Binary files chat-1/src/main/resources/static/emoji/cherries.png and chat-2/src/main/resources/static/emoji/cherries.png differ
+Binary files chat-1/src/main/resources/static/emoji/cherry_blossom.png and chat-2/src/main/resources/static/emoji/cherry_blossom.png differ
+Binary files chat-1/src/main/resources/static/emoji/chestnut.png and chat-2/src/main/resources/static/emoji/chestnut.png differ
+Binary files chat-1/src/main/resources/static/emoji/chicken.png and chat-2/src/main/resources/static/emoji/chicken.png differ
+Binary files chat-1/src/main/resources/static/emoji/children_crossing.png and chat-2/src/main/resources/static/emoji/children_crossing.png differ
+Binary files chat-1/src/main/resources/static/emoji/chocolate_bar.png and chat-2/src/main/resources/static/emoji/chocolate_bar.png differ
+Binary files chat-1/src/main/resources/static/emoji/christmas_tree.png and chat-2/src/main/resources/static/emoji/christmas_tree.png differ
+Binary files chat-1/src/main/resources/static/emoji/church.png and chat-2/src/main/resources/static/emoji/church.png differ
+Binary files chat-1/src/main/resources/static/emoji/cinema.png and chat-2/src/main/resources/static/emoji/cinema.png differ
+Binary files chat-1/src/main/resources/static/emoji/circus_tent.png and chat-2/src/main/resources/static/emoji/circus_tent.png differ
+Binary files chat-1/src/main/resources/static/emoji/city_sunrise.png and chat-2/src/main/resources/static/emoji/city_sunrise.png differ
+Binary files chat-1/src/main/resources/static/emoji/city_sunset.png and chat-2/src/main/resources/static/emoji/city_sunset.png differ
+Binary files chat-1/src/main/resources/static/emoji/clapper.png and chat-2/src/main/resources/static/emoji/clapper.png differ
+Binary files chat-1/src/main/resources/static/emoji/clap.png and chat-2/src/main/resources/static/emoji/clap.png differ
+Binary files chat-1/src/main/resources/static/emoji/clipboard.png and chat-2/src/main/resources/static/emoji/clipboard.png differ
+Binary files chat-1/src/main/resources/static/emoji/clock1030.png and chat-2/src/main/resources/static/emoji/clock1030.png differ
+Binary files chat-1/src/main/resources/static/emoji/clock10.png and chat-2/src/main/resources/static/emoji/clock10.png differ
+Binary files chat-1/src/main/resources/static/emoji/clock1130.png and chat-2/src/main/resources/static/emoji/clock1130.png differ
+Binary files chat-1/src/main/resources/static/emoji/clock11.png and chat-2/src/main/resources/static/emoji/clock11.png differ
+Binary files chat-1/src/main/resources/static/emoji/clock1230.png and chat-2/src/main/resources/static/emoji/clock1230.png differ
+Binary files chat-1/src/main/resources/static/emoji/clock12.png and chat-2/src/main/resources/static/emoji/clock12.png differ
+Binary files chat-1/src/main/resources/static/emoji/clock130.png and chat-2/src/main/resources/static/emoji/clock130.png differ
+Binary files chat-1/src/main/resources/static/emoji/clock1.png and chat-2/src/main/resources/static/emoji/clock1.png differ
+Binary files chat-1/src/main/resources/static/emoji/clock230.png and chat-2/src/main/resources/static/emoji/clock230.png differ
+Binary files chat-1/src/main/resources/static/emoji/clock2.png and chat-2/src/main/resources/static/emoji/clock2.png differ
+Binary files chat-1/src/main/resources/static/emoji/clock330.png and chat-2/src/main/resources/static/emoji/clock330.png differ
+Binary files chat-1/src/main/resources/static/emoji/clock3.png and chat-2/src/main/resources/static/emoji/clock3.png differ
+Binary files chat-1/src/main/resources/static/emoji/clock430.png and chat-2/src/main/resources/static/emoji/clock430.png differ
+Binary files chat-1/src/main/resources/static/emoji/clock4.png and chat-2/src/main/resources/static/emoji/clock4.png differ
+Binary files chat-1/src/main/resources/static/emoji/clock530.png and chat-2/src/main/resources/static/emoji/clock530.png differ
+Binary files chat-1/src/main/resources/static/emoji/clock5.png and chat-2/src/main/resources/static/emoji/clock5.png differ
+Binary files chat-1/src/main/resources/static/emoji/clock630.png and chat-2/src/main/resources/static/emoji/clock630.png differ
+Binary files chat-1/src/main/resources/static/emoji/clock6.png and chat-2/src/main/resources/static/emoji/clock6.png differ
+Binary files chat-1/src/main/resources/static/emoji/clock730.png and chat-2/src/main/resources/static/emoji/clock730.png differ
+Binary files chat-1/src/main/resources/static/emoji/clock7.png and chat-2/src/main/resources/static/emoji/clock7.png differ
+Binary files chat-1/src/main/resources/static/emoji/clock830.png and chat-2/src/main/resources/static/emoji/clock830.png differ
+Binary files chat-1/src/main/resources/static/emoji/clock8.png and chat-2/src/main/resources/static/emoji/clock8.png differ
+Binary files chat-1/src/main/resources/static/emoji/clock930.png and chat-2/src/main/resources/static/emoji/clock930.png differ
+Binary files chat-1/src/main/resources/static/emoji/clock9.png and chat-2/src/main/resources/static/emoji/clock9.png differ
+Binary files chat-1/src/main/resources/static/emoji/closed_book.png and chat-2/src/main/resources/static/emoji/closed_book.png differ
+Binary files chat-1/src/main/resources/static/emoji/closed_lock_with_key.png and chat-2/src/main/resources/static/emoji/closed_lock_with_key.png differ
+Binary files chat-1/src/main/resources/static/emoji/closed_umbrella.png and chat-2/src/main/resources/static/emoji/closed_umbrella.png differ
+Binary files chat-1/src/main/resources/static/emoji/cloud.png and chat-2/src/main/resources/static/emoji/cloud.png differ
+Binary files chat-1/src/main/resources/static/emoji/cl.png and chat-2/src/main/resources/static/emoji/cl.png differ
+Binary files chat-1/src/main/resources/static/emoji/clubs.png and chat-2/src/main/resources/static/emoji/clubs.png differ
+Binary files chat-1/src/main/resources/static/emoji/cn.png and chat-2/src/main/resources/static/emoji/cn.png differ
+Binary files chat-1/src/main/resources/static/emoji/cocktail.png and chat-2/src/main/resources/static/emoji/cocktail.png differ
+Binary files chat-1/src/main/resources/static/emoji/coffee.png and chat-2/src/main/resources/static/emoji/coffee.png differ
+Binary files chat-1/src/main/resources/static/emoji/cold_sweat.png and chat-2/src/main/resources/static/emoji/cold_sweat.png differ
+Binary files chat-1/src/main/resources/static/emoji/collision.png and chat-2/src/main/resources/static/emoji/collision.png differ
+Binary files chat-1/src/main/resources/static/emoji/computer.png and chat-2/src/main/resources/static/emoji/computer.png differ
+Binary files chat-1/src/main/resources/static/emoji/confetti_ball.png and chat-2/src/main/resources/static/emoji/confetti_ball.png differ
+Binary files chat-1/src/main/resources/static/emoji/confounded.png and chat-2/src/main/resources/static/emoji/confounded.png differ
+Binary files chat-1/src/main/resources/static/emoji/confused.png and chat-2/src/main/resources/static/emoji/confused.png differ
+Binary files chat-1/src/main/resources/static/emoji/congratulations.png and chat-2/src/main/resources/static/emoji/congratulations.png differ
+Binary files chat-1/src/main/resources/static/emoji/construction.png and chat-2/src/main/resources/static/emoji/construction.png differ
+Binary files chat-1/src/main/resources/static/emoji/construction_worker.png and chat-2/src/main/resources/static/emoji/construction_worker.png differ
+Binary files chat-1/src/main/resources/static/emoji/convenience_store.png and chat-2/src/main/resources/static/emoji/convenience_store.png differ
+Binary files chat-1/src/main/resources/static/emoji/cookie.png and chat-2/src/main/resources/static/emoji/cookie.png differ
+Binary files chat-1/src/main/resources/static/emoji/cool.png and chat-2/src/main/resources/static/emoji/cool.png differ
+Binary files chat-1/src/main/resources/static/emoji/cop.png and chat-2/src/main/resources/static/emoji/cop.png differ
+Binary files chat-1/src/main/resources/static/emoji/copyright.png and chat-2/src/main/resources/static/emoji/copyright.png differ
+Binary files chat-1/src/main/resources/static/emoji/corn.png and chat-2/src/main/resources/static/emoji/corn.png differ
+Binary files chat-1/src/main/resources/static/emoji/couplekiss.png and chat-2/src/main/resources/static/emoji/couplekiss.png differ
+Binary files chat-1/src/main/resources/static/emoji/couple.png and chat-2/src/main/resources/static/emoji/couple.png differ
+Binary files chat-1/src/main/resources/static/emoji/couple_with_heart.png and chat-2/src/main/resources/static/emoji/couple_with_heart.png differ
+Binary files chat-1/src/main/resources/static/emoji/cow2.png and chat-2/src/main/resources/static/emoji/cow2.png differ
+Binary files chat-1/src/main/resources/static/emoji/cow.png and chat-2/src/main/resources/static/emoji/cow.png differ
+Binary files chat-1/src/main/resources/static/emoji/credit_card.png and chat-2/src/main/resources/static/emoji/credit_card.png differ
+Binary files chat-1/src/main/resources/static/emoji/crocodile.png and chat-2/src/main/resources/static/emoji/crocodile.png differ
+Binary files chat-1/src/main/resources/static/emoji/crossed_flags.png and chat-2/src/main/resources/static/emoji/crossed_flags.png differ
+Binary files chat-1/src/main/resources/static/emoji/crown.png and chat-2/src/main/resources/static/emoji/crown.png differ
+Binary files chat-1/src/main/resources/static/emoji/crying_cat_face.png and chat-2/src/main/resources/static/emoji/crying_cat_face.png differ
+Binary files chat-1/src/main/resources/static/emoji/cry.png and chat-2/src/main/resources/static/emoji/cry.png differ
+Binary files chat-1/src/main/resources/static/emoji/crystal_ball.png and chat-2/src/main/resources/static/emoji/crystal_ball.png differ
+Binary files chat-1/src/main/resources/static/emoji/cupid.png and chat-2/src/main/resources/static/emoji/cupid.png differ
+Binary files chat-1/src/main/resources/static/emoji/curly_loop.png and chat-2/src/main/resources/static/emoji/curly_loop.png differ
+Binary files chat-1/src/main/resources/static/emoji/currency_exchange.png and chat-2/src/main/resources/static/emoji/currency_exchange.png differ
+Binary files chat-1/src/main/resources/static/emoji/curry.png and chat-2/src/main/resources/static/emoji/curry.png differ
+Binary files chat-1/src/main/resources/static/emoji/custard.png and chat-2/src/main/resources/static/emoji/custard.png differ
+Binary files chat-1/src/main/resources/static/emoji/customs.png and chat-2/src/main/resources/static/emoji/customs.png differ
+Binary files chat-1/src/main/resources/static/emoji/cyclone.png and chat-2/src/main/resources/static/emoji/cyclone.png differ
+Binary files chat-1/src/main/resources/static/emoji/dancer.png and chat-2/src/main/resources/static/emoji/dancer.png differ
+Binary files chat-1/src/main/resources/static/emoji/dancers.png and chat-2/src/main/resources/static/emoji/dancers.png differ
+Binary files chat-1/src/main/resources/static/emoji/dango.png and chat-2/src/main/resources/static/emoji/dango.png differ
+Binary files chat-1/src/main/resources/static/emoji/dart.png and chat-2/src/main/resources/static/emoji/dart.png differ
+Binary files chat-1/src/main/resources/static/emoji/dash.png and chat-2/src/main/resources/static/emoji/dash.png differ
+Binary files chat-1/src/main/resources/static/emoji/date.png and chat-2/src/main/resources/static/emoji/date.png differ
+Binary files chat-1/src/main/resources/static/emoji/deciduous_tree.png and chat-2/src/main/resources/static/emoji/deciduous_tree.png differ
+Binary files chat-1/src/main/resources/static/emoji/department_store.png and chat-2/src/main/resources/static/emoji/department_store.png differ
+Binary files chat-1/src/main/resources/static/emoji/de.png and chat-2/src/main/resources/static/emoji/de.png differ
+Binary files chat-1/src/main/resources/static/emoji/diamond_shape_with_a_dot_inside.png and chat-2/src/main/resources/static/emoji/diamond_shape_with_a_dot_inside.png differ
+Binary files chat-1/src/main/resources/static/emoji/diamonds.png and chat-2/src/main/resources/static/emoji/diamonds.png differ
+Binary files chat-1/src/main/resources/static/emoji/disappointed.png and chat-2/src/main/resources/static/emoji/disappointed.png differ
+Binary files chat-1/src/main/resources/static/emoji/disappointed_relieved.png and chat-2/src/main/resources/static/emoji/disappointed_relieved.png differ
+Binary files chat-1/src/main/resources/static/emoji/dizzy_face.png and chat-2/src/main/resources/static/emoji/dizzy_face.png differ
+Binary files chat-1/src/main/resources/static/emoji/dizzy.png and chat-2/src/main/resources/static/emoji/dizzy.png differ
+Binary files chat-1/src/main/resources/static/emoji/dog2.png and chat-2/src/main/resources/static/emoji/dog2.png differ
+Binary files chat-1/src/main/resources/static/emoji/dog.png and chat-2/src/main/resources/static/emoji/dog.png differ
+Binary files chat-1/src/main/resources/static/emoji/dollar.png and chat-2/src/main/resources/static/emoji/dollar.png differ
+Binary files chat-1/src/main/resources/static/emoji/dolls.png and chat-2/src/main/resources/static/emoji/dolls.png differ
+Binary files chat-1/src/main/resources/static/emoji/dolphin.png and chat-2/src/main/resources/static/emoji/dolphin.png differ
+Binary files chat-1/src/main/resources/static/emoji/do_not_litter.png and chat-2/src/main/resources/static/emoji/do_not_litter.png differ
+Binary files chat-1/src/main/resources/static/emoji/door.png and chat-2/src/main/resources/static/emoji/door.png differ
+Binary files chat-1/src/main/resources/static/emoji/doughnut.png and chat-2/src/main/resources/static/emoji/doughnut.png differ
+Binary files chat-1/src/main/resources/static/emoji/dragon_face.png and chat-2/src/main/resources/static/emoji/dragon_face.png differ
+Binary files chat-1/src/main/resources/static/emoji/dragon.png and chat-2/src/main/resources/static/emoji/dragon.png differ
+Binary files chat-1/src/main/resources/static/emoji/dress.png and chat-2/src/main/resources/static/emoji/dress.png differ
+Binary files chat-1/src/main/resources/static/emoji/dromedary_camel.png and chat-2/src/main/resources/static/emoji/dromedary_camel.png differ
+Binary files chat-1/src/main/resources/static/emoji/droplet.png and chat-2/src/main/resources/static/emoji/droplet.png differ
+Binary files chat-1/src/main/resources/static/emoji/dvd.png and chat-2/src/main/resources/static/emoji/dvd.png differ
+Binary files chat-1/src/main/resources/static/emoji/ear_of_rice.png and chat-2/src/main/resources/static/emoji/ear_of_rice.png differ
+Binary files chat-1/src/main/resources/static/emoji/ear.png and chat-2/src/main/resources/static/emoji/ear.png differ
+Binary files chat-1/src/main/resources/static/emoji/earth_africa.png and chat-2/src/main/resources/static/emoji/earth_africa.png differ
+Binary files chat-1/src/main/resources/static/emoji/earth_americas.png and chat-2/src/main/resources/static/emoji/earth_americas.png differ
+Binary files chat-1/src/main/resources/static/emoji/earth_asia.png and chat-2/src/main/resources/static/emoji/earth_asia.png differ
+Binary files chat-1/src/main/resources/static/emoji/eggplant.png and chat-2/src/main/resources/static/emoji/eggplant.png differ
+Binary files chat-1/src/main/resources/static/emoji/egg.png and chat-2/src/main/resources/static/emoji/egg.png differ
+Binary files chat-1/src/main/resources/static/emoji/eightball.png and chat-2/src/main/resources/static/emoji/eightball.png differ
+Binary files chat-1/src/main/resources/static/emoji/eight.png and chat-2/src/main/resources/static/emoji/eight.png differ
+Binary files chat-1/src/main/resources/static/emoji/eight_pointed_black_star.png and chat-2/src/main/resources/static/emoji/eight_pointed_black_star.png differ
+Binary files chat-1/src/main/resources/static/emoji/eight_spoked_asterisk.png and chat-2/src/main/resources/static/emoji/eight_spoked_asterisk.png differ
+Binary files chat-1/src/main/resources/static/emoji/electric_plug.png and chat-2/src/main/resources/static/emoji/electric_plug.png differ
+Binary files chat-1/src/main/resources/static/emoji/elephant.png and chat-2/src/main/resources/static/emoji/elephant.png differ
+Binary files chat-1/src/main/resources/static/emoji/e-mail.png and chat-2/src/main/resources/static/emoji/e-mail.png differ
+Binary files chat-1/src/main/resources/static/emoji/email.png and chat-2/src/main/resources/static/emoji/email.png differ
+Binary files chat-1/src/main/resources/static/emoji/end.png and chat-2/src/main/resources/static/emoji/end.png differ
+Binary files chat-1/src/main/resources/static/emoji/envelope.png and chat-2/src/main/resources/static/emoji/envelope.png differ
+Binary files chat-1/src/main/resources/static/emoji/es.png and chat-2/src/main/resources/static/emoji/es.png differ
+Binary files chat-1/src/main/resources/static/emoji/european_castle.png and chat-2/src/main/resources/static/emoji/european_castle.png differ
+Binary files chat-1/src/main/resources/static/emoji/european_post_office.png and chat-2/src/main/resources/static/emoji/european_post_office.png differ
+Binary files chat-1/src/main/resources/static/emoji/euro.png and chat-2/src/main/resources/static/emoji/euro.png differ
+Binary files chat-1/src/main/resources/static/emoji/evergreen_tree.png and chat-2/src/main/resources/static/emoji/evergreen_tree.png differ
+Binary files chat-1/src/main/resources/static/emoji/exclamation.png and chat-2/src/main/resources/static/emoji/exclamation.png differ
+Binary files chat-1/src/main/resources/static/emoji/expressionless.png and chat-2/src/main/resources/static/emoji/expressionless.png differ
+Binary files chat-1/src/main/resources/static/emoji/eyeglasses.png and chat-2/src/main/resources/static/emoji/eyeglasses.png differ
+Binary files chat-1/src/main/resources/static/emoji/eyes.png and chat-2/src/main/resources/static/emoji/eyes.png differ
+Binary files chat-1/src/main/resources/static/emoji/facepunch.png and chat-2/src/main/resources/static/emoji/facepunch.png differ
+Binary files chat-1/src/main/resources/static/emoji/factory.png and chat-2/src/main/resources/static/emoji/factory.png differ
+Binary files chat-1/src/main/resources/static/emoji/fallen_leaf.png and chat-2/src/main/resources/static/emoji/fallen_leaf.png differ
+Binary files chat-1/src/main/resources/static/emoji/family.png and chat-2/src/main/resources/static/emoji/family.png differ
+Binary files chat-1/src/main/resources/static/emoji/fast_forward.png and chat-2/src/main/resources/static/emoji/fast_forward.png differ
+Binary files chat-1/src/main/resources/static/emoji/fax.png and chat-2/src/main/resources/static/emoji/fax.png differ
+Binary files chat-1/src/main/resources/static/emoji/fearful.png and chat-2/src/main/resources/static/emoji/fearful.png differ
+Binary files chat-1/src/main/resources/static/emoji/feelsgood.png and chat-2/src/main/resources/static/emoji/feelsgood.png differ
+Binary files chat-1/src/main/resources/static/emoji/feet.png and chat-2/src/main/resources/static/emoji/feet.png differ
+Binary files chat-1/src/main/resources/static/emoji/ferris_wheel.png and chat-2/src/main/resources/static/emoji/ferris_wheel.png differ
+Binary files chat-1/src/main/resources/static/emoji/file_folder.png and chat-2/src/main/resources/static/emoji/file_folder.png differ
+Binary files chat-1/src/main/resources/static/emoji/finnadie.png and chat-2/src/main/resources/static/emoji/finnadie.png differ
+Binary files chat-1/src/main/resources/static/emoji/fire_engine.png and chat-2/src/main/resources/static/emoji/fire_engine.png differ
+Binary files chat-1/src/main/resources/static/emoji/fire.png and chat-2/src/main/resources/static/emoji/fire.png differ
+Binary files chat-1/src/main/resources/static/emoji/fireworks.png and chat-2/src/main/resources/static/emoji/fireworks.png differ
+Binary files chat-1/src/main/resources/static/emoji/first_quarter_moon.png and chat-2/src/main/resources/static/emoji/first_quarter_moon.png differ
+Binary files chat-1/src/main/resources/static/emoji/first_quarter_moon_with_face.png and chat-2/src/main/resources/static/emoji/first_quarter_moon_with_face.png differ
+Binary files chat-1/src/main/resources/static/emoji/fish_cake.png and chat-2/src/main/resources/static/emoji/fish_cake.png differ
+Binary files chat-1/src/main/resources/static/emoji/fishing_pole_and_fish.png and chat-2/src/main/resources/static/emoji/fishing_pole_and_fish.png differ
+Binary files chat-1/src/main/resources/static/emoji/fish.png and chat-2/src/main/resources/static/emoji/fish.png differ
+Binary files chat-1/src/main/resources/static/emoji/fist.png and chat-2/src/main/resources/static/emoji/fist.png differ
+Binary files chat-1/src/main/resources/static/emoji/five.png and chat-2/src/main/resources/static/emoji/five.png differ
+Binary files chat-1/src/main/resources/static/emoji/flags.png and chat-2/src/main/resources/static/emoji/flags.png differ
+Binary files chat-1/src/main/resources/static/emoji/flashlight.png and chat-2/src/main/resources/static/emoji/flashlight.png differ
+Binary files chat-1/src/main/resources/static/emoji/floppy_disk.png and chat-2/src/main/resources/static/emoji/floppy_disk.png differ
+Binary files chat-1/src/main/resources/static/emoji/flower_playing_cards.png and chat-2/src/main/resources/static/emoji/flower_playing_cards.png differ
+Binary files chat-1/src/main/resources/static/emoji/flushed.png and chat-2/src/main/resources/static/emoji/flushed.png differ
+Binary files chat-1/src/main/resources/static/emoji/foggy.png and chat-2/src/main/resources/static/emoji/foggy.png differ
+Binary files chat-1/src/main/resources/static/emoji/football.png and chat-2/src/main/resources/static/emoji/football.png differ
+Binary files chat-1/src/main/resources/static/emoji/fork_and_knife.png and chat-2/src/main/resources/static/emoji/fork_and_knife.png differ
+Binary files chat-1/src/main/resources/static/emoji/fountain.png and chat-2/src/main/resources/static/emoji/fountain.png differ
+Binary files chat-1/src/main/resources/static/emoji/four_leaf_clover.png and chat-2/src/main/resources/static/emoji/four_leaf_clover.png differ
+Binary files chat-1/src/main/resources/static/emoji/four.png and chat-2/src/main/resources/static/emoji/four.png differ
+Binary files chat-1/src/main/resources/static/emoji/free.png and chat-2/src/main/resources/static/emoji/free.png differ
+Binary files chat-1/src/main/resources/static/emoji/fried_shrimp.png and chat-2/src/main/resources/static/emoji/fried_shrimp.png differ
+Binary files chat-1/src/main/resources/static/emoji/fries.png and chat-2/src/main/resources/static/emoji/fries.png differ
+Binary files chat-1/src/main/resources/static/emoji/frog.png and chat-2/src/main/resources/static/emoji/frog.png differ
+Binary files chat-1/src/main/resources/static/emoji/frowning.png and chat-2/src/main/resources/static/emoji/frowning.png differ
+Binary files chat-1/src/main/resources/static/emoji/fr.png and chat-2/src/main/resources/static/emoji/fr.png differ
+Binary files chat-1/src/main/resources/static/emoji/fuelpump.png and chat-2/src/main/resources/static/emoji/fuelpump.png differ
+Binary files chat-1/src/main/resources/static/emoji/full_moon.png and chat-2/src/main/resources/static/emoji/full_moon.png differ
+Binary files chat-1/src/main/resources/static/emoji/full_moon_with_face.png and chat-2/src/main/resources/static/emoji/full_moon_with_face.png differ
+Binary files chat-1/src/main/resources/static/emoji/game_die.png and chat-2/src/main/resources/static/emoji/game_die.png differ
+Binary files chat-1/src/main/resources/static/emoji/gb.png and chat-2/src/main/resources/static/emoji/gb.png differ
+Binary files chat-1/src/main/resources/static/emoji/gemini.png and chat-2/src/main/resources/static/emoji/gemini.png differ
+Binary files chat-1/src/main/resources/static/emoji/gem.png and chat-2/src/main/resources/static/emoji/gem.png differ
+Binary files chat-1/src/main/resources/static/emoji/ghost.png and chat-2/src/main/resources/static/emoji/ghost.png differ
+Binary files chat-1/src/main/resources/static/emoji/gift_heart.png and chat-2/src/main/resources/static/emoji/gift_heart.png differ
+Binary files chat-1/src/main/resources/static/emoji/gift.png and chat-2/src/main/resources/static/emoji/gift.png differ
+Binary files chat-1/src/main/resources/static/emoji/girl.png and chat-2/src/main/resources/static/emoji/girl.png differ
+Binary files chat-1/src/main/resources/static/emoji/globe_with_meridians.png and chat-2/src/main/resources/static/emoji/globe_with_meridians.png differ
+Binary files chat-1/src/main/resources/static/emoji/goat.png and chat-2/src/main/resources/static/emoji/goat.png differ
+Binary files chat-1/src/main/resources/static/emoji/goberserk.png and chat-2/src/main/resources/static/emoji/goberserk.png differ
+Binary files chat-1/src/main/resources/static/emoji/godmode.png and chat-2/src/main/resources/static/emoji/godmode.png differ
+Binary files chat-1/src/main/resources/static/emoji/golf.png and chat-2/src/main/resources/static/emoji/golf.png differ
+Binary files chat-1/src/main/resources/static/emoji/grapes.png and chat-2/src/main/resources/static/emoji/grapes.png differ
+Binary files chat-1/src/main/resources/static/emoji/green_apple.png and chat-2/src/main/resources/static/emoji/green_apple.png differ
+Binary files chat-1/src/main/resources/static/emoji/green_book.png and chat-2/src/main/resources/static/emoji/green_book.png differ
+Binary files chat-1/src/main/resources/static/emoji/green_heart.png and chat-2/src/main/resources/static/emoji/green_heart.png differ
+Binary files chat-1/src/main/resources/static/emoji/grey_exclamation.png and chat-2/src/main/resources/static/emoji/grey_exclamation.png differ
+Binary files chat-1/src/main/resources/static/emoji/grey_question.png and chat-2/src/main/resources/static/emoji/grey_question.png differ
+Binary files chat-1/src/main/resources/static/emoji/grimacing.png and chat-2/src/main/resources/static/emoji/grimacing.png differ
+Binary files chat-1/src/main/resources/static/emoji/grinning.png and chat-2/src/main/resources/static/emoji/grinning.png differ
+Binary files chat-1/src/main/resources/static/emoji/grin.png and chat-2/src/main/resources/static/emoji/grin.png differ
+Binary files chat-1/src/main/resources/static/emoji/guardsman.png and chat-2/src/main/resources/static/emoji/guardsman.png differ
+Binary files chat-1/src/main/resources/static/emoji/guitar.png and chat-2/src/main/resources/static/emoji/guitar.png differ
+Binary files chat-1/src/main/resources/static/emoji/gun.png and chat-2/src/main/resources/static/emoji/gun.png differ
+Binary files chat-1/src/main/resources/static/emoji/haircut.png and chat-2/src/main/resources/static/emoji/haircut.png differ
+Binary files chat-1/src/main/resources/static/emoji/hamburger.png and chat-2/src/main/resources/static/emoji/hamburger.png differ
+Binary files chat-1/src/main/resources/static/emoji/hammer.png and chat-2/src/main/resources/static/emoji/hammer.png differ
+Binary files chat-1/src/main/resources/static/emoji/hamster.png and chat-2/src/main/resources/static/emoji/hamster.png differ
+Binary files chat-1/src/main/resources/static/emoji/handbag.png and chat-2/src/main/resources/static/emoji/handbag.png differ
+Binary files chat-1/src/main/resources/static/emoji/hand.png and chat-2/src/main/resources/static/emoji/hand.png differ
+Binary files chat-1/src/main/resources/static/emoji/hankey.png and chat-2/src/main/resources/static/emoji/hankey.png differ
+Binary files chat-1/src/main/resources/static/emoji/hash.png and chat-2/src/main/resources/static/emoji/hash.png differ
+Binary files chat-1/src/main/resources/static/emoji/hatched_chick.png and chat-2/src/main/resources/static/emoji/hatched_chick.png differ
+Binary files chat-1/src/main/resources/static/emoji/hatching_chick.png and chat-2/src/main/resources/static/emoji/hatching_chick.png differ
+Binary files chat-1/src/main/resources/static/emoji/headphones.png and chat-2/src/main/resources/static/emoji/headphones.png differ
+Binary files chat-1/src/main/resources/static/emoji/hear_no_evil.png and chat-2/src/main/resources/static/emoji/hear_no_evil.png differ
+Binary files chat-1/src/main/resources/static/emoji/heartbeat.png and chat-2/src/main/resources/static/emoji/heartbeat.png differ
+Binary files chat-1/src/main/resources/static/emoji/heart_decoration.png and chat-2/src/main/resources/static/emoji/heart_decoration.png differ
+Binary files chat-1/src/main/resources/static/emoji/heart_eyes_cat.png and chat-2/src/main/resources/static/emoji/heart_eyes_cat.png differ
+Binary files chat-1/src/main/resources/static/emoji/heart_eyes.png and chat-2/src/main/resources/static/emoji/heart_eyes.png differ
+Binary files chat-1/src/main/resources/static/emoji/heart.png and chat-2/src/main/resources/static/emoji/heart.png differ
+Binary files chat-1/src/main/resources/static/emoji/heartpulse.png and chat-2/src/main/resources/static/emoji/heartpulse.png differ
+Binary files chat-1/src/main/resources/static/emoji/hearts.png and chat-2/src/main/resources/static/emoji/hearts.png differ
+Binary files chat-1/src/main/resources/static/emoji/heavy_check_mark.png and chat-2/src/main/resources/static/emoji/heavy_check_mark.png differ
+Binary files chat-1/src/main/resources/static/emoji/heavy_division_sign.png and chat-2/src/main/resources/static/emoji/heavy_division_sign.png differ
+Binary files chat-1/src/main/resources/static/emoji/heavy_dollar_sign.png and chat-2/src/main/resources/static/emoji/heavy_dollar_sign.png differ
+Binary files chat-1/src/main/resources/static/emoji/heavy_exclamation_mark.png and chat-2/src/main/resources/static/emoji/heavy_exclamation_mark.png differ
+Binary files chat-1/src/main/resources/static/emoji/heavy_minus_sign.png and chat-2/src/main/resources/static/emoji/heavy_minus_sign.png differ
+Binary files chat-1/src/main/resources/static/emoji/heavy_multiplication_x.png and chat-2/src/main/resources/static/emoji/heavy_multiplication_x.png differ
+Binary files chat-1/src/main/resources/static/emoji/heavy_plus_sign.png and chat-2/src/main/resources/static/emoji/heavy_plus_sign.png differ
+Binary files chat-1/src/main/resources/static/emoji/helicopter.png and chat-2/src/main/resources/static/emoji/helicopter.png differ
+Binary files chat-1/src/main/resources/static/emoji/herb.png and chat-2/src/main/resources/static/emoji/herb.png differ
+Binary files chat-1/src/main/resources/static/emoji/hibiscus.png and chat-2/src/main/resources/static/emoji/hibiscus.png differ
+Binary files chat-1/src/main/resources/static/emoji/high_brightness.png and chat-2/src/main/resources/static/emoji/high_brightness.png differ
+Binary files chat-1/src/main/resources/static/emoji/high_heel.png and chat-2/src/main/resources/static/emoji/high_heel.png differ
+Binary files chat-1/src/main/resources/static/emoji/hocho.png and chat-2/src/main/resources/static/emoji/hocho.png differ
+Binary files chat-1/src/main/resources/static/emoji/honeybee.png and chat-2/src/main/resources/static/emoji/honeybee.png differ
+Binary files chat-1/src/main/resources/static/emoji/honey_pot.png and chat-2/src/main/resources/static/emoji/honey_pot.png differ
+Binary files chat-1/src/main/resources/static/emoji/horse.png and chat-2/src/main/resources/static/emoji/horse.png differ
+Binary files chat-1/src/main/resources/static/emoji/horse_racing.png and chat-2/src/main/resources/static/emoji/horse_racing.png differ
+Binary files chat-1/src/main/resources/static/emoji/hospital.png and chat-2/src/main/resources/static/emoji/hospital.png differ
+Binary files chat-1/src/main/resources/static/emoji/hotel.png and chat-2/src/main/resources/static/emoji/hotel.png differ
+Binary files chat-1/src/main/resources/static/emoji/hotsprings.png and chat-2/src/main/resources/static/emoji/hotsprings.png differ
+Binary files chat-1/src/main/resources/static/emoji/hourglass_flowing_sand.png and chat-2/src/main/resources/static/emoji/hourglass_flowing_sand.png differ
+Binary files chat-1/src/main/resources/static/emoji/hourglass.png and chat-2/src/main/resources/static/emoji/hourglass.png differ
+Binary files chat-1/src/main/resources/static/emoji/house.png and chat-2/src/main/resources/static/emoji/house.png differ
+Binary files chat-1/src/main/resources/static/emoji/house_with_garden.png and chat-2/src/main/resources/static/emoji/house_with_garden.png differ
+Binary files chat-1/src/main/resources/static/emoji/hurtrealbad.png and chat-2/src/main/resources/static/emoji/hurtrealbad.png differ
+Binary files chat-1/src/main/resources/static/emoji/hushed.png and chat-2/src/main/resources/static/emoji/hushed.png differ
+Binary files chat-1/src/main/resources/static/emoji/ice_cream.png and chat-2/src/main/resources/static/emoji/ice_cream.png differ
+Binary files chat-1/src/main/resources/static/emoji/icecream.png and chat-2/src/main/resources/static/emoji/icecream.png differ
+Binary files chat-1/src/main/resources/static/emoji/ideograph_advantage.png and chat-2/src/main/resources/static/emoji/ideograph_advantage.png differ
+Binary files chat-1/src/main/resources/static/emoji/id.png and chat-2/src/main/resources/static/emoji/id.png differ
+Binary files chat-1/src/main/resources/static/emoji/imp.png and chat-2/src/main/resources/static/emoji/imp.png differ
+Binary files chat-1/src/main/resources/static/emoji/inbox_tray.png and chat-2/src/main/resources/static/emoji/inbox_tray.png differ
+Binary files chat-1/src/main/resources/static/emoji/incoming_envelope.png and chat-2/src/main/resources/static/emoji/incoming_envelope.png differ
+Binary files chat-1/src/main/resources/static/emoji/information_desk_person.png and chat-2/src/main/resources/static/emoji/information_desk_person.png differ
+Binary files chat-1/src/main/resources/static/emoji/information_source.png and chat-2/src/main/resources/static/emoji/information_source.png differ
+Binary files chat-1/src/main/resources/static/emoji/innocent.png and chat-2/src/main/resources/static/emoji/innocent.png differ
+Binary files chat-1/src/main/resources/static/emoji/interrobang.png and chat-2/src/main/resources/static/emoji/interrobang.png differ
+Binary files chat-1/src/main/resources/static/emoji/iphone.png and chat-2/src/main/resources/static/emoji/iphone.png differ
+Binary files chat-1/src/main/resources/static/emoji/it.png and chat-2/src/main/resources/static/emoji/it.png differ
+Binary files chat-1/src/main/resources/static/emoji/izakaya_lantern.png and chat-2/src/main/resources/static/emoji/izakaya_lantern.png differ
+Binary files chat-1/src/main/resources/static/emoji/jack_o_lantern.png and chat-2/src/main/resources/static/emoji/jack_o_lantern.png differ
+Binary files chat-1/src/main/resources/static/emoji/japanese_castle.png and chat-2/src/main/resources/static/emoji/japanese_castle.png differ
+Binary files chat-1/src/main/resources/static/emoji/japanese_goblin.png and chat-2/src/main/resources/static/emoji/japanese_goblin.png differ
+Binary files chat-1/src/main/resources/static/emoji/japanese_ogre.png and chat-2/src/main/resources/static/emoji/japanese_ogre.png differ
+Binary files chat-1/src/main/resources/static/emoji/japan.png and chat-2/src/main/resources/static/emoji/japan.png differ
+Binary files chat-1/src/main/resources/static/emoji/jeans.png and chat-2/src/main/resources/static/emoji/jeans.png differ
+Binary files chat-1/src/main/resources/static/emoji/joy_cat.png and chat-2/src/main/resources/static/emoji/joy_cat.png differ
+Binary files chat-1/src/main/resources/static/emoji/joy.png and chat-2/src/main/resources/static/emoji/joy.png differ
+Binary files chat-1/src/main/resources/static/emoji/jp.png and chat-2/src/main/resources/static/emoji/jp.png differ
+Binary files chat-1/src/main/resources/static/emoji/keycap_ten.png and chat-2/src/main/resources/static/emoji/keycap_ten.png differ
+Binary files chat-1/src/main/resources/static/emoji/key.png and chat-2/src/main/resources/static/emoji/key.png differ
+Binary files chat-1/src/main/resources/static/emoji/kimono.png and chat-2/src/main/resources/static/emoji/kimono.png differ
+Binary files chat-1/src/main/resources/static/emoji/kissing_cat.png and chat-2/src/main/resources/static/emoji/kissing_cat.png differ
+Binary files chat-1/src/main/resources/static/emoji/kissing_closed_eyes.png and chat-2/src/main/resources/static/emoji/kissing_closed_eyes.png differ
+Binary files chat-1/src/main/resources/static/emoji/kissing_heart.png and chat-2/src/main/resources/static/emoji/kissing_heart.png differ
+Binary files chat-1/src/main/resources/static/emoji/kissing.png and chat-2/src/main/resources/static/emoji/kissing.png differ
+Binary files chat-1/src/main/resources/static/emoji/kissing_smiling_eyes.png and chat-2/src/main/resources/static/emoji/kissing_smiling_eyes.png differ
+Binary files chat-1/src/main/resources/static/emoji/kiss.png and chat-2/src/main/resources/static/emoji/kiss.png differ
+Binary files chat-1/src/main/resources/static/emoji/koala.png and chat-2/src/main/resources/static/emoji/koala.png differ
+Binary files chat-1/src/main/resources/static/emoji/koko.png and chat-2/src/main/resources/static/emoji/koko.png differ
+Binary files chat-1/src/main/resources/static/emoji/kr.png and chat-2/src/main/resources/static/emoji/kr.png differ
+Binary files chat-1/src/main/resources/static/emoji/large_blue_circle.png and chat-2/src/main/resources/static/emoji/large_blue_circle.png differ
+Binary files chat-1/src/main/resources/static/emoji/large_blue_diamond.png and chat-2/src/main/resources/static/emoji/large_blue_diamond.png differ
+Binary files chat-1/src/main/resources/static/emoji/large_orange_diamond.png and chat-2/src/main/resources/static/emoji/large_orange_diamond.png differ
+Binary files chat-1/src/main/resources/static/emoji/last_quarter_moon.png and chat-2/src/main/resources/static/emoji/last_quarter_moon.png differ
+Binary files chat-1/src/main/resources/static/emoji/last_quarter_moon_with_face.png and chat-2/src/main/resources/static/emoji/last_quarter_moon_with_face.png differ
+Binary files chat-1/src/main/resources/static/emoji/laughing.png and chat-2/src/main/resources/static/emoji/laughing.png differ
+Binary files chat-1/src/main/resources/static/emoji/leaves.png and chat-2/src/main/resources/static/emoji/leaves.png differ
+Binary files chat-1/src/main/resources/static/emoji/ledger.png and chat-2/src/main/resources/static/emoji/ledger.png differ
+Binary files chat-1/src/main/resources/static/emoji/left_luggage.png and chat-2/src/main/resources/static/emoji/left_luggage.png differ
+Binary files chat-1/src/main/resources/static/emoji/left_right_arrow.png and chat-2/src/main/resources/static/emoji/left_right_arrow.png differ
+Binary files chat-1/src/main/resources/static/emoji/leftwards_arrow_with_hook.png and chat-2/src/main/resources/static/emoji/leftwards_arrow_with_hook.png differ
+Binary files chat-1/src/main/resources/static/emoji/lemon.png and chat-2/src/main/resources/static/emoji/lemon.png differ
+Binary files chat-1/src/main/resources/static/emoji/leopard.png and chat-2/src/main/resources/static/emoji/leopard.png differ
+Binary files chat-1/src/main/resources/static/emoji/leo.png and chat-2/src/main/resources/static/emoji/leo.png differ
+Binary files chat-1/src/main/resources/static/emoji/libra.png and chat-2/src/main/resources/static/emoji/libra.png differ
+Binary files chat-1/src/main/resources/static/emoji/light_rail.png and chat-2/src/main/resources/static/emoji/light_rail.png differ
+Binary files chat-1/src/main/resources/static/emoji/link.png and chat-2/src/main/resources/static/emoji/link.png differ
+Binary files chat-1/src/main/resources/static/emoji/lips.png and chat-2/src/main/resources/static/emoji/lips.png differ
+Binary files chat-1/src/main/resources/static/emoji/lipstick.png and chat-2/src/main/resources/static/emoji/lipstick.png differ
+Binary files chat-1/src/main/resources/static/emoji/lock.png and chat-2/src/main/resources/static/emoji/lock.png differ
+Binary files chat-1/src/main/resources/static/emoji/lock_with_ink_pen.png and chat-2/src/main/resources/static/emoji/lock_with_ink_pen.png differ
+Binary files chat-1/src/main/resources/static/emoji/lollipop.png and chat-2/src/main/resources/static/emoji/lollipop.png differ
+Binary files chat-1/src/main/resources/static/emoji/loop.png and chat-2/src/main/resources/static/emoji/loop.png differ
+Binary files chat-1/src/main/resources/static/emoji/loudspeaker.png and chat-2/src/main/resources/static/emoji/loudspeaker.png differ
+Binary files chat-1/src/main/resources/static/emoji/love_hotel.png and chat-2/src/main/resources/static/emoji/love_hotel.png differ
+Binary files chat-1/src/main/resources/static/emoji/love_letter.png and chat-2/src/main/resources/static/emoji/love_letter.png differ
+Binary files chat-1/src/main/resources/static/emoji/low_brightness.png and chat-2/src/main/resources/static/emoji/low_brightness.png differ
+Binary files chat-1/src/main/resources/static/emoji/mag.png and chat-2/src/main/resources/static/emoji/mag.png differ
+Binary files chat-1/src/main/resources/static/emoji/mag_right.png and chat-2/src/main/resources/static/emoji/mag_right.png differ
+Binary files chat-1/src/main/resources/static/emoji/mahjong.png and chat-2/src/main/resources/static/emoji/mahjong.png differ
+Binary files chat-1/src/main/resources/static/emoji/mailbox_closed.png and chat-2/src/main/resources/static/emoji/mailbox_closed.png differ
+Binary files chat-1/src/main/resources/static/emoji/mailbox.png and chat-2/src/main/resources/static/emoji/mailbox.png differ
+Binary files chat-1/src/main/resources/static/emoji/mailbox_with_mail.png and chat-2/src/main/resources/static/emoji/mailbox_with_mail.png differ
+Binary files chat-1/src/main/resources/static/emoji/mailbox_with_no_mail.png and chat-2/src/main/resources/static/emoji/mailbox_with_no_mail.png differ
+Binary files chat-1/src/main/resources/static/emoji/man.png and chat-2/src/main/resources/static/emoji/man.png differ
+Binary files chat-1/src/main/resources/static/emoji/mans_shoe.png and chat-2/src/main/resources/static/emoji/mans_shoe.png differ
+Binary files chat-1/src/main/resources/static/emoji/man_with_gua_pi_mao.png and chat-2/src/main/resources/static/emoji/man_with_gua_pi_mao.png differ
+Binary files chat-1/src/main/resources/static/emoji/man_with_turban.png and chat-2/src/main/resources/static/emoji/man_with_turban.png differ
+Binary files chat-1/src/main/resources/static/emoji/maple_leaf.png and chat-2/src/main/resources/static/emoji/maple_leaf.png differ
+Binary files chat-1/src/main/resources/static/emoji/mask.png and chat-2/src/main/resources/static/emoji/mask.png differ
+Binary files chat-1/src/main/resources/static/emoji/massage.png and chat-2/src/main/resources/static/emoji/massage.png differ
+Binary files chat-1/src/main/resources/static/emoji/meat_on_bone.png and chat-2/src/main/resources/static/emoji/meat_on_bone.png differ
+Binary files chat-1/src/main/resources/static/emoji/mega.png and chat-2/src/main/resources/static/emoji/mega.png differ
+Binary files chat-1/src/main/resources/static/emoji/melon.png and chat-2/src/main/resources/static/emoji/melon.png differ
+Binary files chat-1/src/main/resources/static/emoji/memo.png and chat-2/src/main/resources/static/emoji/memo.png differ
+Binary files chat-1/src/main/resources/static/emoji/mens.png and chat-2/src/main/resources/static/emoji/mens.png differ
+Binary files chat-1/src/main/resources/static/emoji/metal.png and chat-2/src/main/resources/static/emoji/metal.png differ
+Binary files chat-1/src/main/resources/static/emoji/metro.png and chat-2/src/main/resources/static/emoji/metro.png differ
+Binary files chat-1/src/main/resources/static/emoji/microphone.png and chat-2/src/main/resources/static/emoji/microphone.png differ
+Binary files chat-1/src/main/resources/static/emoji/microscope.png and chat-2/src/main/resources/static/emoji/microscope.png differ
+Binary files chat-1/src/main/resources/static/emoji/milky_way.png and chat-2/src/main/resources/static/emoji/milky_way.png differ
+Binary files chat-1/src/main/resources/static/emoji/minibus.png and chat-2/src/main/resources/static/emoji/minibus.png differ
+Binary files chat-1/src/main/resources/static/emoji/minidisc.png and chat-2/src/main/resources/static/emoji/minidisc.png differ
+Binary files chat-1/src/main/resources/static/emoji/mobile_phone_off.png and chat-2/src/main/resources/static/emoji/mobile_phone_off.png differ
+Binary files chat-1/src/main/resources/static/emoji/moneybag.png and chat-2/src/main/resources/static/emoji/moneybag.png differ
+Binary files chat-1/src/main/resources/static/emoji/money_with_wings.png and chat-2/src/main/resources/static/emoji/money_with_wings.png differ
+Binary files chat-1/src/main/resources/static/emoji/monkey_face.png and chat-2/src/main/resources/static/emoji/monkey_face.png differ
+Binary files chat-1/src/main/resources/static/emoji/monkey.png and chat-2/src/main/resources/static/emoji/monkey.png differ
+Binary files chat-1/src/main/resources/static/emoji/monorail.png and chat-2/src/main/resources/static/emoji/monorail.png differ
+Binary files chat-1/src/main/resources/static/emoji/moon.png and chat-2/src/main/resources/static/emoji/moon.png differ
+Binary files chat-1/src/main/resources/static/emoji/mortar_board.png and chat-2/src/main/resources/static/emoji/mortar_board.png differ
+Binary files chat-1/src/main/resources/static/emoji/mountain_bicyclist.png and chat-2/src/main/resources/static/emoji/mountain_bicyclist.png differ
+Binary files chat-1/src/main/resources/static/emoji/mountain_cableway.png and chat-2/src/main/resources/static/emoji/mountain_cableway.png differ
+Binary files chat-1/src/main/resources/static/emoji/mountain_railway.png and chat-2/src/main/resources/static/emoji/mountain_railway.png differ
+Binary files chat-1/src/main/resources/static/emoji/mount_fuji.png and chat-2/src/main/resources/static/emoji/mount_fuji.png differ
+Binary files chat-1/src/main/resources/static/emoji/mouse2.png and chat-2/src/main/resources/static/emoji/mouse2.png differ
+Binary files chat-1/src/main/resources/static/emoji/mouse.png and chat-2/src/main/resources/static/emoji/mouse.png differ
+Binary files chat-1/src/main/resources/static/emoji/movie_camera.png and chat-2/src/main/resources/static/emoji/movie_camera.png differ
+Binary files chat-1/src/main/resources/static/emoji/moyai.png and chat-2/src/main/resources/static/emoji/moyai.png differ
+Binary files chat-1/src/main/resources/static/emoji/m.png and chat-2/src/main/resources/static/emoji/m.png differ
+Binary files chat-1/src/main/resources/static/emoji/muscle.png and chat-2/src/main/resources/static/emoji/muscle.png differ
+Binary files chat-1/src/main/resources/static/emoji/mushroom.png and chat-2/src/main/resources/static/emoji/mushroom.png differ
+Binary files chat-1/src/main/resources/static/emoji/musical_keyboard.png and chat-2/src/main/resources/static/emoji/musical_keyboard.png differ
+Binary files chat-1/src/main/resources/static/emoji/musical_note.png and chat-2/src/main/resources/static/emoji/musical_note.png differ
+Binary files chat-1/src/main/resources/static/emoji/musical_score.png and chat-2/src/main/resources/static/emoji/musical_score.png differ
+Binary files chat-1/src/main/resources/static/emoji/mute.png and chat-2/src/main/resources/static/emoji/mute.png differ
+Binary files chat-1/src/main/resources/static/emoji/nail_care.png and chat-2/src/main/resources/static/emoji/nail_care.png differ
+Binary files chat-1/src/main/resources/static/emoji/name_badge.png and chat-2/src/main/resources/static/emoji/name_badge.png differ
+Binary files chat-1/src/main/resources/static/emoji/neckbeard.png and chat-2/src/main/resources/static/emoji/neckbeard.png differ
+Binary files chat-1/src/main/resources/static/emoji/necktie.png and chat-2/src/main/resources/static/emoji/necktie.png differ
+Binary files chat-1/src/main/resources/static/emoji/negative_squared_cross_mark.png and chat-2/src/main/resources/static/emoji/negative_squared_cross_mark.png differ
+Binary files chat-1/src/main/resources/static/emoji/neutral_face.png and chat-2/src/main/resources/static/emoji/neutral_face.png differ
+Binary files chat-1/src/main/resources/static/emoji/new_moon.png and chat-2/src/main/resources/static/emoji/new_moon.png differ
+Binary files chat-1/src/main/resources/static/emoji/new_moon_with_face.png and chat-2/src/main/resources/static/emoji/new_moon_with_face.png differ
+Binary files chat-1/src/main/resources/static/emoji/new.png and chat-2/src/main/resources/static/emoji/new.png differ
+Binary files chat-1/src/main/resources/static/emoji/newspaper.png and chat-2/src/main/resources/static/emoji/newspaper.png differ
+Binary files chat-1/src/main/resources/static/emoji/ng.png and chat-2/src/main/resources/static/emoji/ng.png differ
+Binary files chat-1/src/main/resources/static/emoji/nine.png and chat-2/src/main/resources/static/emoji/nine.png differ
+Binary files chat-1/src/main/resources/static/emoji/no_bell.png and chat-2/src/main/resources/static/emoji/no_bell.png differ
+Binary files chat-1/src/main/resources/static/emoji/no_bicycles.png and chat-2/src/main/resources/static/emoji/no_bicycles.png differ
+Binary files chat-1/src/main/resources/static/emoji/no_entry.png and chat-2/src/main/resources/static/emoji/no_entry.png differ
+Binary files chat-1/src/main/resources/static/emoji/no_entry_sign.png and chat-2/src/main/resources/static/emoji/no_entry_sign.png differ
+Binary files chat-1/src/main/resources/static/emoji/no_good.png and chat-2/src/main/resources/static/emoji/no_good.png differ
+Binary files chat-1/src/main/resources/static/emoji/no_mobile_phones.png and chat-2/src/main/resources/static/emoji/no_mobile_phones.png differ
+Binary files chat-1/src/main/resources/static/emoji/no_mouth.png and chat-2/src/main/resources/static/emoji/no_mouth.png differ
+Binary files chat-1/src/main/resources/static/emoji/non-potable_water.png and chat-2/src/main/resources/static/emoji/non-potable_water.png differ
+Binary files chat-1/src/main/resources/static/emoji/no_pedestrians.png and chat-2/src/main/resources/static/emoji/no_pedestrians.png differ
+Binary files chat-1/src/main/resources/static/emoji/nose.png and chat-2/src/main/resources/static/emoji/nose.png differ
+Binary files chat-1/src/main/resources/static/emoji/no_smoking.png and chat-2/src/main/resources/static/emoji/no_smoking.png differ
+Binary files chat-1/src/main/resources/static/emoji/notebook.png and chat-2/src/main/resources/static/emoji/notebook.png differ
+Binary files chat-1/src/main/resources/static/emoji/notebook_with_decorative_cover.png and chat-2/src/main/resources/static/emoji/notebook_with_decorative_cover.png differ
+Binary files chat-1/src/main/resources/static/emoji/notes.png and chat-2/src/main/resources/static/emoji/notes.png differ
+Binary files chat-1/src/main/resources/static/emoji/nut_and_bolt.png and chat-2/src/main/resources/static/emoji/nut_and_bolt.png differ
+Binary files chat-1/src/main/resources/static/emoji/o2.png and chat-2/src/main/resources/static/emoji/o2.png differ
+Binary files chat-1/src/main/resources/static/emoji/ocean.png and chat-2/src/main/resources/static/emoji/ocean.png differ
+Binary files chat-1/src/main/resources/static/emoji/octocat.png and chat-2/src/main/resources/static/emoji/octocat.png differ
+Binary files chat-1/src/main/resources/static/emoji/octopus.png and chat-2/src/main/resources/static/emoji/octopus.png differ
+Binary files chat-1/src/main/resources/static/emoji/oden.png and chat-2/src/main/resources/static/emoji/oden.png differ
+Binary files chat-1/src/main/resources/static/emoji/office.png and chat-2/src/main/resources/static/emoji/office.png differ
+Binary files chat-1/src/main/resources/static/emoji/ok_hand.png and chat-2/src/main/resources/static/emoji/ok_hand.png differ
+Binary files chat-1/src/main/resources/static/emoji/ok.png and chat-2/src/main/resources/static/emoji/ok.png differ
+Binary files chat-1/src/main/resources/static/emoji/ok_woman.png and chat-2/src/main/resources/static/emoji/ok_woman.png differ
+Binary files chat-1/src/main/resources/static/emoji/older_man.png and chat-2/src/main/resources/static/emoji/older_man.png differ
+Binary files chat-1/src/main/resources/static/emoji/older_woman.png and chat-2/src/main/resources/static/emoji/older_woman.png differ
+Binary files chat-1/src/main/resources/static/emoji/oncoming_automobile.png and chat-2/src/main/resources/static/emoji/oncoming_automobile.png differ
+Binary files chat-1/src/main/resources/static/emoji/oncoming_bus.png and chat-2/src/main/resources/static/emoji/oncoming_bus.png differ
+Binary files chat-1/src/main/resources/static/emoji/oncoming_police_car.png and chat-2/src/main/resources/static/emoji/oncoming_police_car.png differ
+Binary files chat-1/src/main/resources/static/emoji/oncoming_taxi.png and chat-2/src/main/resources/static/emoji/oncoming_taxi.png differ
+Binary files chat-1/src/main/resources/static/emoji/onehundred.png and chat-2/src/main/resources/static/emoji/onehundred.png differ
+Binary files chat-1/src/main/resources/static/emoji/one.png and chat-2/src/main/resources/static/emoji/one.png differ
+Binary files chat-1/src/main/resources/static/emoji/onetwothreefour.png and chat-2/src/main/resources/static/emoji/onetwothreefour.png differ
+Binary files chat-1/src/main/resources/static/emoji/onezeronine.png and chat-2/src/main/resources/static/emoji/onezeronine.png differ
+Binary files chat-1/src/main/resources/static/emoji/on.png and chat-2/src/main/resources/static/emoji/on.png differ
+Binary files chat-1/src/main/resources/static/emoji/open_file_folder.png and chat-2/src/main/resources/static/emoji/open_file_folder.png differ
+Binary files chat-1/src/main/resources/static/emoji/open_hands.png and chat-2/src/main/resources/static/emoji/open_hands.png differ
+Binary files chat-1/src/main/resources/static/emoji/open_mouth.png and chat-2/src/main/resources/static/emoji/open_mouth.png differ
+Binary files chat-1/src/main/resources/static/emoji/ophiuchus.png and chat-2/src/main/resources/static/emoji/ophiuchus.png differ
+Binary files chat-1/src/main/resources/static/emoji/o.png and chat-2/src/main/resources/static/emoji/o.png differ
+Binary files chat-1/src/main/resources/static/emoji/orange_book.png and chat-2/src/main/resources/static/emoji/orange_book.png differ
+Binary files chat-1/src/main/resources/static/emoji/outbox_tray.png and chat-2/src/main/resources/static/emoji/outbox_tray.png differ
+Binary files chat-1/src/main/resources/static/emoji/ox.png and chat-2/src/main/resources/static/emoji/ox.png differ
+Binary files chat-1/src/main/resources/static/emoji/page_facing_up.png and chat-2/src/main/resources/static/emoji/page_facing_up.png differ
+Binary files chat-1/src/main/resources/static/emoji/pager.png and chat-2/src/main/resources/static/emoji/pager.png differ
+Binary files chat-1/src/main/resources/static/emoji/page_with_curl.png and chat-2/src/main/resources/static/emoji/page_with_curl.png differ
+Binary files chat-1/src/main/resources/static/emoji/palm_tree.png and chat-2/src/main/resources/static/emoji/palm_tree.png differ
+Binary files chat-1/src/main/resources/static/emoji/panda_face.png and chat-2/src/main/resources/static/emoji/panda_face.png differ
+Binary files chat-1/src/main/resources/static/emoji/paperclip.png and chat-2/src/main/resources/static/emoji/paperclip.png differ
+Binary files chat-1/src/main/resources/static/emoji/parking.png and chat-2/src/main/resources/static/emoji/parking.png differ
+Binary files chat-1/src/main/resources/static/emoji/part_alternation_mark.png and chat-2/src/main/resources/static/emoji/part_alternation_mark.png differ
+Binary files chat-1/src/main/resources/static/emoji/partly_sunny.png and chat-2/src/main/resources/static/emoji/partly_sunny.png differ
+Binary files chat-1/src/main/resources/static/emoji/passport_control.png and chat-2/src/main/resources/static/emoji/passport_control.png differ
+Binary files chat-1/src/main/resources/static/emoji/paw_prints.png and chat-2/src/main/resources/static/emoji/paw_prints.png differ
+Binary files chat-1/src/main/resources/static/emoji/peach.png and chat-2/src/main/resources/static/emoji/peach.png differ
+Binary files chat-1/src/main/resources/static/emoji/pear.png and chat-2/src/main/resources/static/emoji/pear.png differ
+Binary files chat-1/src/main/resources/static/emoji/pencil2.png and chat-2/src/main/resources/static/emoji/pencil2.png differ
+Binary files chat-1/src/main/resources/static/emoji/pencil.png and chat-2/src/main/resources/static/emoji/pencil.png differ
+Binary files chat-1/src/main/resources/static/emoji/penguin.png and chat-2/src/main/resources/static/emoji/penguin.png differ
+Binary files chat-1/src/main/resources/static/emoji/pensive.png and chat-2/src/main/resources/static/emoji/pensive.png differ
+Binary files chat-1/src/main/resources/static/emoji/performing_arts.png and chat-2/src/main/resources/static/emoji/performing_arts.png differ
+Binary files chat-1/src/main/resources/static/emoji/persevere.png and chat-2/src/main/resources/static/emoji/persevere.png differ
+Binary files chat-1/src/main/resources/static/emoji/person_frowning.png and chat-2/src/main/resources/static/emoji/person_frowning.png differ
+Binary files chat-1/src/main/resources/static/emoji/person_with_blond_hair.png and chat-2/src/main/resources/static/emoji/person_with_blond_hair.png differ
+Binary files chat-1/src/main/resources/static/emoji/person_with_pouting_face.png and chat-2/src/main/resources/static/emoji/person_with_pouting_face.png differ
+Binary files chat-1/src/main/resources/static/emoji/phone.png and chat-2/src/main/resources/static/emoji/phone.png differ
+Binary files chat-1/src/main/resources/static/emoji/pig2.png and chat-2/src/main/resources/static/emoji/pig2.png differ
+Binary files chat-1/src/main/resources/static/emoji/pig_nose.png and chat-2/src/main/resources/static/emoji/pig_nose.png differ
+Binary files chat-1/src/main/resources/static/emoji/pig.png and chat-2/src/main/resources/static/emoji/pig.png differ
+Binary files chat-1/src/main/resources/static/emoji/pill.png and chat-2/src/main/resources/static/emoji/pill.png differ
+Binary files chat-1/src/main/resources/static/emoji/pineapple.png and chat-2/src/main/resources/static/emoji/pineapple.png differ
+Binary files chat-1/src/main/resources/static/emoji/pisces.png and chat-2/src/main/resources/static/emoji/pisces.png differ
+Binary files chat-1/src/main/resources/static/emoji/pizza.png and chat-2/src/main/resources/static/emoji/pizza.png differ
+Binary files chat-1/src/main/resources/static/emoji/point_down.png and chat-2/src/main/resources/static/emoji/point_down.png differ
+Binary files chat-1/src/main/resources/static/emoji/point_left.png and chat-2/src/main/resources/static/emoji/point_left.png differ
+Binary files chat-1/src/main/resources/static/emoji/point_right.png and chat-2/src/main/resources/static/emoji/point_right.png differ
+Binary files chat-1/src/main/resources/static/emoji/point_up_2.png and chat-2/src/main/resources/static/emoji/point_up_2.png differ
+Binary files chat-1/src/main/resources/static/emoji/point_up.png and chat-2/src/main/resources/static/emoji/point_up.png differ
+Binary files chat-1/src/main/resources/static/emoji/police_car.png and chat-2/src/main/resources/static/emoji/police_car.png differ
+Binary files chat-1/src/main/resources/static/emoji/poodle.png and chat-2/src/main/resources/static/emoji/poodle.png differ
+Binary files chat-1/src/main/resources/static/emoji/poop.png and chat-2/src/main/resources/static/emoji/poop.png differ
+Binary files chat-1/src/main/resources/static/emoji/postal_horn.png and chat-2/src/main/resources/static/emoji/postal_horn.png differ
+Binary files chat-1/src/main/resources/static/emoji/postbox.png and chat-2/src/main/resources/static/emoji/postbox.png differ
+Binary files chat-1/src/main/resources/static/emoji/post_office.png and chat-2/src/main/resources/static/emoji/post_office.png differ
+Binary files chat-1/src/main/resources/static/emoji/potable_water.png and chat-2/src/main/resources/static/emoji/potable_water.png differ
+Binary files chat-1/src/main/resources/static/emoji/pouch.png and chat-2/src/main/resources/static/emoji/pouch.png differ
+Binary files chat-1/src/main/resources/static/emoji/poultry_leg.png and chat-2/src/main/resources/static/emoji/poultry_leg.png differ
+Binary files chat-1/src/main/resources/static/emoji/pound.png and chat-2/src/main/resources/static/emoji/pound.png differ
+Binary files chat-1/src/main/resources/static/emoji/pouting_cat.png and chat-2/src/main/resources/static/emoji/pouting_cat.png differ
+Binary files chat-1/src/main/resources/static/emoji/pray.png and chat-2/src/main/resources/static/emoji/pray.png differ
+Binary files chat-1/src/main/resources/static/emoji/princess.png and chat-2/src/main/resources/static/emoji/princess.png differ
+Binary files chat-1/src/main/resources/static/emoji/punch.png and chat-2/src/main/resources/static/emoji/punch.png differ
+Binary files chat-1/src/main/resources/static/emoji/purple_heart.png and chat-2/src/main/resources/static/emoji/purple_heart.png differ
+Binary files chat-1/src/main/resources/static/emoji/purse.png and chat-2/src/main/resources/static/emoji/purse.png differ
+Binary files chat-1/src/main/resources/static/emoji/pushpin.png and chat-2/src/main/resources/static/emoji/pushpin.png differ
+Binary files chat-1/src/main/resources/static/emoji/put_litter_in_its_place.png and chat-2/src/main/resources/static/emoji/put_litter_in_its_place.png differ
+Binary files chat-1/src/main/resources/static/emoji/question.png and chat-2/src/main/resources/static/emoji/question.png differ
+Binary files chat-1/src/main/resources/static/emoji/rabbit2.png and chat-2/src/main/resources/static/emoji/rabbit2.png differ
+Binary files chat-1/src/main/resources/static/emoji/rabbit.png and chat-2/src/main/resources/static/emoji/rabbit.png differ
+Binary files chat-1/src/main/resources/static/emoji/racehorse.png and chat-2/src/main/resources/static/emoji/racehorse.png differ
+Binary files chat-1/src/main/resources/static/emoji/radio_button.png and chat-2/src/main/resources/static/emoji/radio_button.png differ
+Binary files chat-1/src/main/resources/static/emoji/radio.png and chat-2/src/main/resources/static/emoji/radio.png differ
+Binary files chat-1/src/main/resources/static/emoji/rage1.png and chat-2/src/main/resources/static/emoji/rage1.png differ
+Binary files chat-1/src/main/resources/static/emoji/rage2.png and chat-2/src/main/resources/static/emoji/rage2.png differ
+Binary files chat-1/src/main/resources/static/emoji/rage3.png and chat-2/src/main/resources/static/emoji/rage3.png differ
+Binary files chat-1/src/main/resources/static/emoji/rage4.png and chat-2/src/main/resources/static/emoji/rage4.png differ
+Binary files chat-1/src/main/resources/static/emoji/rage.png and chat-2/src/main/resources/static/emoji/rage.png differ
+Binary files chat-1/src/main/resources/static/emoji/railway_car.png and chat-2/src/main/resources/static/emoji/railway_car.png differ
+Binary files chat-1/src/main/resources/static/emoji/rainbow.png and chat-2/src/main/resources/static/emoji/rainbow.png differ
+Binary files chat-1/src/main/resources/static/emoji/raised_hand.png and chat-2/src/main/resources/static/emoji/raised_hand.png differ
+Binary files chat-1/src/main/resources/static/emoji/raised_hands.png and chat-2/src/main/resources/static/emoji/raised_hands.png differ
+Binary files chat-1/src/main/resources/static/emoji/raising_hand.png and chat-2/src/main/resources/static/emoji/raising_hand.png differ
+Binary files chat-1/src/main/resources/static/emoji/ramen.png and chat-2/src/main/resources/static/emoji/ramen.png differ
+Binary files chat-1/src/main/resources/static/emoji/ram.png and chat-2/src/main/resources/static/emoji/ram.png differ
+Binary files chat-1/src/main/resources/static/emoji/rat.png and chat-2/src/main/resources/static/emoji/rat.png differ
+Binary files chat-1/src/main/resources/static/emoji/recycle.png and chat-2/src/main/resources/static/emoji/recycle.png differ
+Binary files chat-1/src/main/resources/static/emoji/red_car.png and chat-2/src/main/resources/static/emoji/red_car.png differ
+Binary files chat-1/src/main/resources/static/emoji/red_circle.png and chat-2/src/main/resources/static/emoji/red_circle.png differ
+Binary files chat-1/src/main/resources/static/emoji/registered.png and chat-2/src/main/resources/static/emoji/registered.png differ
+Binary files chat-1/src/main/resources/static/emoji/relaxed.png and chat-2/src/main/resources/static/emoji/relaxed.png differ
+Binary files chat-1/src/main/resources/static/emoji/relieved.png and chat-2/src/main/resources/static/emoji/relieved.png differ
+Binary files chat-1/src/main/resources/static/emoji/repeat_one.png and chat-2/src/main/resources/static/emoji/repeat_one.png differ
+Binary files chat-1/src/main/resources/static/emoji/repeat.png and chat-2/src/main/resources/static/emoji/repeat.png differ
+Binary files chat-1/src/main/resources/static/emoji/restroom.png and chat-2/src/main/resources/static/emoji/restroom.png differ
+Binary files chat-1/src/main/resources/static/emoji/revolving_hearts.png and chat-2/src/main/resources/static/emoji/revolving_hearts.png differ
+Binary files chat-1/src/main/resources/static/emoji/rewind.png and chat-2/src/main/resources/static/emoji/rewind.png differ
+Binary files chat-1/src/main/resources/static/emoji/ribbon.png and chat-2/src/main/resources/static/emoji/ribbon.png differ
+Binary files chat-1/src/main/resources/static/emoji/rice_ball.png and chat-2/src/main/resources/static/emoji/rice_ball.png differ
+Binary files chat-1/src/main/resources/static/emoji/rice_cracker.png and chat-2/src/main/resources/static/emoji/rice_cracker.png differ
+Binary files chat-1/src/main/resources/static/emoji/rice.png and chat-2/src/main/resources/static/emoji/rice.png differ
+Binary files chat-1/src/main/resources/static/emoji/rice_scene.png and chat-2/src/main/resources/static/emoji/rice_scene.png differ
+Binary files chat-1/src/main/resources/static/emoji/ring.png and chat-2/src/main/resources/static/emoji/ring.png differ
+Binary files chat-1/src/main/resources/static/emoji/rocket.png and chat-2/src/main/resources/static/emoji/rocket.png differ
+Binary files chat-1/src/main/resources/static/emoji/roller_coaster.png and chat-2/src/main/resources/static/emoji/roller_coaster.png differ
+Binary files chat-1/src/main/resources/static/emoji/rooster.png and chat-2/src/main/resources/static/emoji/rooster.png differ
+Binary files chat-1/src/main/resources/static/emoji/rose.png and chat-2/src/main/resources/static/emoji/rose.png differ
+Binary files chat-1/src/main/resources/static/emoji/rotating_light.png and chat-2/src/main/resources/static/emoji/rotating_light.png differ
+Binary files chat-1/src/main/resources/static/emoji/round_pushpin.png and chat-2/src/main/resources/static/emoji/round_pushpin.png differ
+Binary files chat-1/src/main/resources/static/emoji/rowboat.png and chat-2/src/main/resources/static/emoji/rowboat.png differ
+Binary files chat-1/src/main/resources/static/emoji/rugby_football.png and chat-2/src/main/resources/static/emoji/rugby_football.png differ
+Binary files chat-1/src/main/resources/static/emoji/runner.png and chat-2/src/main/resources/static/emoji/runner.png differ
+Binary files chat-1/src/main/resources/static/emoji/running.png and chat-2/src/main/resources/static/emoji/running.png differ
+Binary files chat-1/src/main/resources/static/emoji/running_shirt_with_sash.png and chat-2/src/main/resources/static/emoji/running_shirt_with_sash.png differ
+Binary files chat-1/src/main/resources/static/emoji/ru.png and chat-2/src/main/resources/static/emoji/ru.png differ
+Binary files chat-1/src/main/resources/static/emoji/sagittarius.png and chat-2/src/main/resources/static/emoji/sagittarius.png differ
+Binary files chat-1/src/main/resources/static/emoji/sailboat.png and chat-2/src/main/resources/static/emoji/sailboat.png differ
+Binary files chat-1/src/main/resources/static/emoji/sake.png and chat-2/src/main/resources/static/emoji/sake.png differ
+Binary files chat-1/src/main/resources/static/emoji/sandal.png and chat-2/src/main/resources/static/emoji/sandal.png differ
+Binary files chat-1/src/main/resources/static/emoji/santa.png and chat-2/src/main/resources/static/emoji/santa.png differ
+Binary files chat-1/src/main/resources/static/emoji/sa.png and chat-2/src/main/resources/static/emoji/sa.png differ
+Binary files chat-1/src/main/resources/static/emoji/satellite.png and chat-2/src/main/resources/static/emoji/satellite.png differ
+Binary files chat-1/src/main/resources/static/emoji/satisfied.png and chat-2/src/main/resources/static/emoji/satisfied.png differ
+Binary files chat-1/src/main/resources/static/emoji/saxophone.png and chat-2/src/main/resources/static/emoji/saxophone.png differ
+Binary files chat-1/src/main/resources/static/emoji/school.png and chat-2/src/main/resources/static/emoji/school.png differ
+Binary files chat-1/src/main/resources/static/emoji/school_satchel.png and chat-2/src/main/resources/static/emoji/school_satchel.png differ
+Binary files chat-1/src/main/resources/static/emoji/scissors.png and chat-2/src/main/resources/static/emoji/scissors.png differ
+Binary files chat-1/src/main/resources/static/emoji/scorpius.png and chat-2/src/main/resources/static/emoji/scorpius.png differ
+Binary files chat-1/src/main/resources/static/emoji/scream_cat.png and chat-2/src/main/resources/static/emoji/scream_cat.png differ
+Binary files chat-1/src/main/resources/static/emoji/scream.png and chat-2/src/main/resources/static/emoji/scream.png differ
+Binary files chat-1/src/main/resources/static/emoji/scroll.png and chat-2/src/main/resources/static/emoji/scroll.png differ
+Binary files chat-1/src/main/resources/static/emoji/seat.png and chat-2/src/main/resources/static/emoji/seat.png differ
+Binary files chat-1/src/main/resources/static/emoji/secret.png and chat-2/src/main/resources/static/emoji/secret.png differ
+Binary files chat-1/src/main/resources/static/emoji/seedling.png and chat-2/src/main/resources/static/emoji/seedling.png differ
+Binary files chat-1/src/main/resources/static/emoji/see_no_evil.png and chat-2/src/main/resources/static/emoji/see_no_evil.png differ
+Binary files chat-1/src/main/resources/static/emoji/seven.png and chat-2/src/main/resources/static/emoji/seven.png differ
+Binary files chat-1/src/main/resources/static/emoji/shaved_ice.png and chat-2/src/main/resources/static/emoji/shaved_ice.png differ
+Binary files chat-1/src/main/resources/static/emoji/sheep.png and chat-2/src/main/resources/static/emoji/sheep.png differ
+Binary files chat-1/src/main/resources/static/emoji/shell.png and chat-2/src/main/resources/static/emoji/shell.png differ
+Binary files chat-1/src/main/resources/static/emoji/shipit.png and chat-2/src/main/resources/static/emoji/shipit.png differ
+Binary files chat-1/src/main/resources/static/emoji/ship.png and chat-2/src/main/resources/static/emoji/ship.png differ
+Binary files chat-1/src/main/resources/static/emoji/shirt.png and chat-2/src/main/resources/static/emoji/shirt.png differ
+Binary files chat-1/src/main/resources/static/emoji/shit.png and chat-2/src/main/resources/static/emoji/shit.png differ
+Binary files chat-1/src/main/resources/static/emoji/shoe.png and chat-2/src/main/resources/static/emoji/shoe.png differ
+Binary files chat-1/src/main/resources/static/emoji/shower.png and chat-2/src/main/resources/static/emoji/shower.png differ
+Binary files chat-1/src/main/resources/static/emoji/signal_strength.png and chat-2/src/main/resources/static/emoji/signal_strength.png differ
+Binary files chat-1/src/main/resources/static/emoji/six.png and chat-2/src/main/resources/static/emoji/six.png differ
+Binary files chat-1/src/main/resources/static/emoji/six_pointed_star.png and chat-2/src/main/resources/static/emoji/six_pointed_star.png differ
+Binary files chat-1/src/main/resources/static/emoji/ski.png and chat-2/src/main/resources/static/emoji/ski.png differ
+Binary files chat-1/src/main/resources/static/emoji/skull.png and chat-2/src/main/resources/static/emoji/skull.png differ
+Binary files chat-1/src/main/resources/static/emoji/sleeping.png and chat-2/src/main/resources/static/emoji/sleeping.png differ
+Binary files chat-1/src/main/resources/static/emoji/sleepy.png and chat-2/src/main/resources/static/emoji/sleepy.png differ
+Binary files chat-1/src/main/resources/static/emoji/slot_machine.png and chat-2/src/main/resources/static/emoji/slot_machine.png differ
+Binary files chat-1/src/main/resources/static/emoji/small_blue_diamond.png and chat-2/src/main/resources/static/emoji/small_blue_diamond.png differ
+Binary files chat-1/src/main/resources/static/emoji/small_orange_diamond.png and chat-2/src/main/resources/static/emoji/small_orange_diamond.png differ
+Binary files chat-1/src/main/resources/static/emoji/small_red_triangle_down.png and chat-2/src/main/resources/static/emoji/small_red_triangle_down.png differ
+Binary files chat-1/src/main/resources/static/emoji/small_red_triangle.png and chat-2/src/main/resources/static/emoji/small_red_triangle.png differ
+Binary files chat-1/src/main/resources/static/emoji/smile_cat.png and chat-2/src/main/resources/static/emoji/smile_cat.png differ
+Binary files chat-1/src/main/resources/static/emoji/smile.png and chat-2/src/main/resources/static/emoji/smile.png differ
+Binary files chat-1/src/main/resources/static/emoji/smiley_cat.png and chat-2/src/main/resources/static/emoji/smiley_cat.png differ
+Binary files chat-1/src/main/resources/static/emoji/smiley.png and chat-2/src/main/resources/static/emoji/smiley.png differ
+Binary files chat-1/src/main/resources/static/emoji/smiling_imp.png and chat-2/src/main/resources/static/emoji/smiling_imp.png differ
+Binary files chat-1/src/main/resources/static/emoji/smirk_cat.png and chat-2/src/main/resources/static/emoji/smirk_cat.png differ
+Binary files chat-1/src/main/resources/static/emoji/smirk.png and chat-2/src/main/resources/static/emoji/smirk.png differ
+Binary files chat-1/src/main/resources/static/emoji/smoking.png and chat-2/src/main/resources/static/emoji/smoking.png differ
+Binary files chat-1/src/main/resources/static/emoji/snail.png and chat-2/src/main/resources/static/emoji/snail.png differ
+Binary files chat-1/src/main/resources/static/emoji/snake.png and chat-2/src/main/resources/static/emoji/snake.png differ
+Binary files chat-1/src/main/resources/static/emoji/snowboarder.png and chat-2/src/main/resources/static/emoji/snowboarder.png differ
+Binary files chat-1/src/main/resources/static/emoji/snowflake.png and chat-2/src/main/resources/static/emoji/snowflake.png differ
+Binary files chat-1/src/main/resources/static/emoji/snowman.png and chat-2/src/main/resources/static/emoji/snowman.png differ
+Binary files chat-1/src/main/resources/static/emoji/sob.png and chat-2/src/main/resources/static/emoji/sob.png differ
+Binary files chat-1/src/main/resources/static/emoji/soccer.png and chat-2/src/main/resources/static/emoji/soccer.png differ
+Binary files chat-1/src/main/resources/static/emoji/soon.png and chat-2/src/main/resources/static/emoji/soon.png differ
+Binary files chat-1/src/main/resources/static/emoji/sos.png and chat-2/src/main/resources/static/emoji/sos.png differ
+Binary files chat-1/src/main/resources/static/emoji/sound.png and chat-2/src/main/resources/static/emoji/sound.png differ
+Binary files chat-1/src/main/resources/static/emoji/space_invader.png and chat-2/src/main/resources/static/emoji/space_invader.png differ
+Binary files chat-1/src/main/resources/static/emoji/spades.png and chat-2/src/main/resources/static/emoji/spades.png differ
+Binary files chat-1/src/main/resources/static/emoji/spaghetti.png and chat-2/src/main/resources/static/emoji/spaghetti.png differ
+Binary files chat-1/src/main/resources/static/emoji/sparkler.png and chat-2/src/main/resources/static/emoji/sparkler.png differ
+Binary files chat-1/src/main/resources/static/emoji/sparkles.png and chat-2/src/main/resources/static/emoji/sparkles.png differ
+Binary files chat-1/src/main/resources/static/emoji/sparkling_heart.png and chat-2/src/main/resources/static/emoji/sparkling_heart.png differ
+Binary files chat-1/src/main/resources/static/emoji/speaker.png and chat-2/src/main/resources/static/emoji/speaker.png differ
+Binary files chat-1/src/main/resources/static/emoji/speak_no_evil.png and chat-2/src/main/resources/static/emoji/speak_no_evil.png differ
+Binary files chat-1/src/main/resources/static/emoji/speech_balloon.png and chat-2/src/main/resources/static/emoji/speech_balloon.png differ
+Binary files chat-1/src/main/resources/static/emoji/speedboat.png and chat-2/src/main/resources/static/emoji/speedboat.png differ
+Binary files chat-1/src/main/resources/static/emoji/squirrel.png and chat-2/src/main/resources/static/emoji/squirrel.png differ
+Binary files chat-1/src/main/resources/static/emoji/star2.png and chat-2/src/main/resources/static/emoji/star2.png differ
+Binary files chat-1/src/main/resources/static/emoji/star.png and chat-2/src/main/resources/static/emoji/star.png differ
+Binary files chat-1/src/main/resources/static/emoji/stars.png and chat-2/src/main/resources/static/emoji/stars.png differ
+Binary files chat-1/src/main/resources/static/emoji/station.png and chat-2/src/main/resources/static/emoji/station.png differ
+Binary files chat-1/src/main/resources/static/emoji/statue_of_liberty.png and chat-2/src/main/resources/static/emoji/statue_of_liberty.png differ
+Binary files chat-1/src/main/resources/static/emoji/steam_locomotive.png and chat-2/src/main/resources/static/emoji/steam_locomotive.png differ
+Binary files chat-1/src/main/resources/static/emoji/stew.png and chat-2/src/main/resources/static/emoji/stew.png differ
+Binary files chat-1/src/main/resources/static/emoji/straight_ruler.png and chat-2/src/main/resources/static/emoji/straight_ruler.png differ
+Binary files chat-1/src/main/resources/static/emoji/strawberry.png and chat-2/src/main/resources/static/emoji/strawberry.png differ
+Binary files chat-1/src/main/resources/static/emoji/stuck_out_tongue_closed_eyes.png and chat-2/src/main/resources/static/emoji/stuck_out_tongue_closed_eyes.png differ
+Binary files chat-1/src/main/resources/static/emoji/stuck_out_tongue.png and chat-2/src/main/resources/static/emoji/stuck_out_tongue.png differ
+Binary files chat-1/src/main/resources/static/emoji/stuck_out_tongue_winking_eye.png and chat-2/src/main/resources/static/emoji/stuck_out_tongue_winking_eye.png differ
+Binary files chat-1/src/main/resources/static/emoji/sunflower.png and chat-2/src/main/resources/static/emoji/sunflower.png differ
+Binary files chat-1/src/main/resources/static/emoji/sunglasses.png and chat-2/src/main/resources/static/emoji/sunglasses.png differ
+Binary files chat-1/src/main/resources/static/emoji/sunny.png and chat-2/src/main/resources/static/emoji/sunny.png differ
+Binary files chat-1/src/main/resources/static/emoji/sunrise_over_mountains.png and chat-2/src/main/resources/static/emoji/sunrise_over_mountains.png differ
+Binary files chat-1/src/main/resources/static/emoji/sunrise.png and chat-2/src/main/resources/static/emoji/sunrise.png differ
+Binary files chat-1/src/main/resources/static/emoji/sun_with_face.png and chat-2/src/main/resources/static/emoji/sun_with_face.png differ
+Binary files chat-1/src/main/resources/static/emoji/surfer.png and chat-2/src/main/resources/static/emoji/surfer.png differ
+Binary files chat-1/src/main/resources/static/emoji/sushi.png and chat-2/src/main/resources/static/emoji/sushi.png differ
+Binary files chat-1/src/main/resources/static/emoji/suspect.png and chat-2/src/main/resources/static/emoji/suspect.png differ
+Binary files chat-1/src/main/resources/static/emoji/suspension_railway.png and chat-2/src/main/resources/static/emoji/suspension_railway.png differ
+Binary files chat-1/src/main/resources/static/emoji/sweat_drops.png and chat-2/src/main/resources/static/emoji/sweat_drops.png differ
+Binary files chat-1/src/main/resources/static/emoji/sweat.png and chat-2/src/main/resources/static/emoji/sweat.png differ
+Binary files chat-1/src/main/resources/static/emoji/sweat_smile.png and chat-2/src/main/resources/static/emoji/sweat_smile.png differ
+Binary files chat-1/src/main/resources/static/emoji/sweet_potato.png and chat-2/src/main/resources/static/emoji/sweet_potato.png differ
+Binary files chat-1/src/main/resources/static/emoji/swimmer.png and chat-2/src/main/resources/static/emoji/swimmer.png differ
+Binary files chat-1/src/main/resources/static/emoji/symbols.png and chat-2/src/main/resources/static/emoji/symbols.png differ
+Binary files chat-1/src/main/resources/static/emoji/syringe.png and chat-2/src/main/resources/static/emoji/syringe.png differ
+Binary files chat-1/src/main/resources/static/emoji/tada.png and chat-2/src/main/resources/static/emoji/tada.png differ
+Binary files chat-1/src/main/resources/static/emoji/tanabata_tree.png and chat-2/src/main/resources/static/emoji/tanabata_tree.png differ
+Binary files chat-1/src/main/resources/static/emoji/tangerine.png and chat-2/src/main/resources/static/emoji/tangerine.png differ
+Binary files chat-1/src/main/resources/static/emoji/taurus.png and chat-2/src/main/resources/static/emoji/taurus.png differ
+Binary files chat-1/src/main/resources/static/emoji/taxi.png and chat-2/src/main/resources/static/emoji/taxi.png differ
+Binary files chat-1/src/main/resources/static/emoji/tea.png and chat-2/src/main/resources/static/emoji/tea.png differ
+Binary files chat-1/src/main/resources/static/emoji/telephone.png and chat-2/src/main/resources/static/emoji/telephone.png differ
+Binary files chat-1/src/main/resources/static/emoji/telephone_receiver.png and chat-2/src/main/resources/static/emoji/telephone_receiver.png differ
+Binary files chat-1/src/main/resources/static/emoji/telescope.png and chat-2/src/main/resources/static/emoji/telescope.png differ
+Binary files chat-1/src/main/resources/static/emoji/tennis.png and chat-2/src/main/resources/static/emoji/tennis.png differ
+Binary files chat-1/src/main/resources/static/emoji/tent.png and chat-2/src/main/resources/static/emoji/tent.png differ
+Binary files chat-1/src/main/resources/static/emoji/thought_balloon.png and chat-2/src/main/resources/static/emoji/thought_balloon.png differ
+Binary files chat-1/src/main/resources/static/emoji/three.png and chat-2/src/main/resources/static/emoji/three.png differ
+Binary files chat-1/src/main/resources/static/emoji/thumbsdown.png and chat-2/src/main/resources/static/emoji/thumbsdown.png differ
+Binary files chat-1/src/main/resources/static/emoji/thumbsup.png and chat-2/src/main/resources/static/emoji/thumbsup.png differ
+Binary files chat-1/src/main/resources/static/emoji/ticket.png and chat-2/src/main/resources/static/emoji/ticket.png differ
+Binary files chat-1/src/main/resources/static/emoji/tiger2.png and chat-2/src/main/resources/static/emoji/tiger2.png differ
+Binary files chat-1/src/main/resources/static/emoji/tiger.png and chat-2/src/main/resources/static/emoji/tiger.png differ
+Binary files chat-1/src/main/resources/static/emoji/tired_face.png and chat-2/src/main/resources/static/emoji/tired_face.png differ
+Binary files chat-1/src/main/resources/static/emoji/tm.png and chat-2/src/main/resources/static/emoji/tm.png differ
+Binary files chat-1/src/main/resources/static/emoji/toilet.png and chat-2/src/main/resources/static/emoji/toilet.png differ
+Binary files chat-1/src/main/resources/static/emoji/tokyo_tower.png and chat-2/src/main/resources/static/emoji/tokyo_tower.png differ
+Binary files chat-1/src/main/resources/static/emoji/tomato.png and chat-2/src/main/resources/static/emoji/tomato.png differ
+Binary files chat-1/src/main/resources/static/emoji/tongue.png and chat-2/src/main/resources/static/emoji/tongue.png differ
+Binary files chat-1/src/main/resources/static/emoji/tophat.png and chat-2/src/main/resources/static/emoji/tophat.png differ
+Binary files chat-1/src/main/resources/static/emoji/top.png and chat-2/src/main/resources/static/emoji/top.png differ
+Binary files chat-1/src/main/resources/static/emoji/tractor.png and chat-2/src/main/resources/static/emoji/tractor.png differ
+Binary files chat-1/src/main/resources/static/emoji/traffic_light.png and chat-2/src/main/resources/static/emoji/traffic_light.png differ
+Binary files chat-1/src/main/resources/static/emoji/train2.png and chat-2/src/main/resources/static/emoji/train2.png differ
+Binary files chat-1/src/main/resources/static/emoji/train.png and chat-2/src/main/resources/static/emoji/train.png differ
+Binary files chat-1/src/main/resources/static/emoji/tram.png and chat-2/src/main/resources/static/emoji/tram.png differ
+Binary files chat-1/src/main/resources/static/emoji/triangular_flag_on_post.png and chat-2/src/main/resources/static/emoji/triangular_flag_on_post.png differ
+Binary files chat-1/src/main/resources/static/emoji/triangular_ruler.png and chat-2/src/main/resources/static/emoji/triangular_ruler.png differ
+Binary files chat-1/src/main/resources/static/emoji/trident.png and chat-2/src/main/resources/static/emoji/trident.png differ
+Binary files chat-1/src/main/resources/static/emoji/triumph.png and chat-2/src/main/resources/static/emoji/triumph.png differ
+Binary files chat-1/src/main/resources/static/emoji/trolleybus.png and chat-2/src/main/resources/static/emoji/trolleybus.png differ
+Binary files chat-1/src/main/resources/static/emoji/trollface.png and chat-2/src/main/resources/static/emoji/trollface.png differ
+Binary files chat-1/src/main/resources/static/emoji/trophy.png and chat-2/src/main/resources/static/emoji/trophy.png differ
+Binary files chat-1/src/main/resources/static/emoji/tropical_drink.png and chat-2/src/main/resources/static/emoji/tropical_drink.png differ
+Binary files chat-1/src/main/resources/static/emoji/tropical_fish.png and chat-2/src/main/resources/static/emoji/tropical_fish.png differ
+Binary files chat-1/src/main/resources/static/emoji/truck.png and chat-2/src/main/resources/static/emoji/truck.png differ
+Binary files chat-1/src/main/resources/static/emoji/trumpet.png and chat-2/src/main/resources/static/emoji/trumpet.png differ
+Binary files chat-1/src/main/resources/static/emoji/tshirt.png and chat-2/src/main/resources/static/emoji/tshirt.png differ
+Binary files chat-1/src/main/resources/static/emoji/tulip.png and chat-2/src/main/resources/static/emoji/tulip.png differ
+Binary files chat-1/src/main/resources/static/emoji/turtle.png and chat-2/src/main/resources/static/emoji/turtle.png differ
+Binary files chat-1/src/main/resources/static/emoji/tv.png and chat-2/src/main/resources/static/emoji/tv.png differ
+Binary files chat-1/src/main/resources/static/emoji/twisted_rightwards_arrows.png and chat-2/src/main/resources/static/emoji/twisted_rightwards_arrows.png differ
+Binary files chat-1/src/main/resources/static/emoji/two_hearts.png and chat-2/src/main/resources/static/emoji/two_hearts.png differ
+Binary files chat-1/src/main/resources/static/emoji/two_men_holding_hands.png and chat-2/src/main/resources/static/emoji/two_men_holding_hands.png differ
+Binary files chat-1/src/main/resources/static/emoji/two.png and chat-2/src/main/resources/static/emoji/two.png differ
+Binary files chat-1/src/main/resources/static/emoji/two_women_holding_hands.png and chat-2/src/main/resources/static/emoji/two_women_holding_hands.png differ
+Binary files chat-1/src/main/resources/static/emoji/u5272.png and chat-2/src/main/resources/static/emoji/u5272.png differ
+Binary files chat-1/src/main/resources/static/emoji/u5408.png and chat-2/src/main/resources/static/emoji/u5408.png differ
+Binary files chat-1/src/main/resources/static/emoji/u55b6.png and chat-2/src/main/resources/static/emoji/u55b6.png differ
+Binary files chat-1/src/main/resources/static/emoji/u6307.png and chat-2/src/main/resources/static/emoji/u6307.png differ
+Binary files chat-1/src/main/resources/static/emoji/u6708.png and chat-2/src/main/resources/static/emoji/u6708.png differ
+Binary files chat-1/src/main/resources/static/emoji/u6709.png and chat-2/src/main/resources/static/emoji/u6709.png differ
+Binary files chat-1/src/main/resources/static/emoji/u6e80.png and chat-2/src/main/resources/static/emoji/u6e80.png differ
+Binary files chat-1/src/main/resources/static/emoji/u7121.png and chat-2/src/main/resources/static/emoji/u7121.png differ
+Binary files chat-1/src/main/resources/static/emoji/u7533.png and chat-2/src/main/resources/static/emoji/u7533.png differ
+Binary files chat-1/src/main/resources/static/emoji/u7981.png and chat-2/src/main/resources/static/emoji/u7981.png differ
+Binary files chat-1/src/main/resources/static/emoji/u7a7a.png and chat-2/src/main/resources/static/emoji/u7a7a.png differ
+Binary files chat-1/src/main/resources/static/emoji/uk.png and chat-2/src/main/resources/static/emoji/uk.png differ
+Binary files chat-1/src/main/resources/static/emoji/umbrella.png and chat-2/src/main/resources/static/emoji/umbrella.png differ
+Binary files chat-1/src/main/resources/static/emoji/unamused.png and chat-2/src/main/resources/static/emoji/unamused.png differ
+Binary files chat-1/src/main/resources/static/emoji/underage.png and chat-2/src/main/resources/static/emoji/underage.png differ
+Binary files chat-1/src/main/resources/static/emoji/unlock.png and chat-2/src/main/resources/static/emoji/unlock.png differ
+Binary files chat-1/src/main/resources/static/emoji/up.png and chat-2/src/main/resources/static/emoji/up.png differ
+Binary files chat-1/src/main/resources/static/emoji/us.png and chat-2/src/main/resources/static/emoji/us.png differ
+Binary files chat-1/src/main/resources/static/emoji/vertical_traffic_light.png and chat-2/src/main/resources/static/emoji/vertical_traffic_light.png differ
+Binary files chat-1/src/main/resources/static/emoji/vhs.png and chat-2/src/main/resources/static/emoji/vhs.png differ
+Binary files chat-1/src/main/resources/static/emoji/vibration_mode.png and chat-2/src/main/resources/static/emoji/vibration_mode.png differ
+Binary files chat-1/src/main/resources/static/emoji/video_camera.png and chat-2/src/main/resources/static/emoji/video_camera.png differ
+Binary files chat-1/src/main/resources/static/emoji/video_game.png and chat-2/src/main/resources/static/emoji/video_game.png differ
+Binary files chat-1/src/main/resources/static/emoji/violin.png and chat-2/src/main/resources/static/emoji/violin.png differ
+Binary files chat-1/src/main/resources/static/emoji/virgo.png and chat-2/src/main/resources/static/emoji/virgo.png differ
+Binary files chat-1/src/main/resources/static/emoji/volcano.png and chat-2/src/main/resources/static/emoji/volcano.png differ
+Binary files chat-1/src/main/resources/static/emoji/v.png and chat-2/src/main/resources/static/emoji/v.png differ
+Binary files chat-1/src/main/resources/static/emoji/vs.png and chat-2/src/main/resources/static/emoji/vs.png differ
+Binary files chat-1/src/main/resources/static/emoji/walking.png and chat-2/src/main/resources/static/emoji/walking.png differ
+Binary files chat-1/src/main/resources/static/emoji/waning_crescent_moon.png and chat-2/src/main/resources/static/emoji/waning_crescent_moon.png differ
+Binary files chat-1/src/main/resources/static/emoji/waning_gibbous_moon.png and chat-2/src/main/resources/static/emoji/waning_gibbous_moon.png differ
+Binary files chat-1/src/main/resources/static/emoji/warning.png and chat-2/src/main/resources/static/emoji/warning.png differ
+Binary files chat-1/src/main/resources/static/emoji/watch.png and chat-2/src/main/resources/static/emoji/watch.png differ
+Binary files chat-1/src/main/resources/static/emoji/water_buffalo.png and chat-2/src/main/resources/static/emoji/water_buffalo.png differ
+Binary files chat-1/src/main/resources/static/emoji/watermelon.png and chat-2/src/main/resources/static/emoji/watermelon.png differ
+Binary files chat-1/src/main/resources/static/emoji/wave.png and chat-2/src/main/resources/static/emoji/wave.png differ
+Binary files chat-1/src/main/resources/static/emoji/wavy_dash.png and chat-2/src/main/resources/static/emoji/wavy_dash.png differ
+Binary files chat-1/src/main/resources/static/emoji/waxing_crescent_moon.png and chat-2/src/main/resources/static/emoji/waxing_crescent_moon.png differ
+Binary files chat-1/src/main/resources/static/emoji/waxing_gibbous_moon.png and chat-2/src/main/resources/static/emoji/waxing_gibbous_moon.png differ
+Binary files chat-1/src/main/resources/static/emoji/wc.png and chat-2/src/main/resources/static/emoji/wc.png differ
+Binary files chat-1/src/main/resources/static/emoji/weary.png and chat-2/src/main/resources/static/emoji/weary.png differ
+Binary files chat-1/src/main/resources/static/emoji/wedding.png and chat-2/src/main/resources/static/emoji/wedding.png differ
+Binary files chat-1/src/main/resources/static/emoji/whale2.png and chat-2/src/main/resources/static/emoji/whale2.png differ
+Binary files chat-1/src/main/resources/static/emoji/whale.png and chat-2/src/main/resources/static/emoji/whale.png differ
+Binary files chat-1/src/main/resources/static/emoji/wheelchair.png and chat-2/src/main/resources/static/emoji/wheelchair.png differ
+Binary files chat-1/src/main/resources/static/emoji/white_check_mark.png and chat-2/src/main/resources/static/emoji/white_check_mark.png differ
+Binary files chat-1/src/main/resources/static/emoji/white_circle.png and chat-2/src/main/resources/static/emoji/white_circle.png differ
+Binary files chat-1/src/main/resources/static/emoji/white_flower.png and chat-2/src/main/resources/static/emoji/white_flower.png differ
+Binary files chat-1/src/main/resources/static/emoji/white_square_button.png and chat-2/src/main/resources/static/emoji/white_square_button.png differ
+Binary files chat-1/src/main/resources/static/emoji/white_square.png and chat-2/src/main/resources/static/emoji/white_square.png differ
+Binary files chat-1/src/main/resources/static/emoji/wind_chime.png and chat-2/src/main/resources/static/emoji/wind_chime.png differ
+Binary files chat-1/src/main/resources/static/emoji/wine_glass.png and chat-2/src/main/resources/static/emoji/wine_glass.png differ
+Binary files chat-1/src/main/resources/static/emoji/wink2.png and chat-2/src/main/resources/static/emoji/wink2.png differ
+Binary files chat-1/src/main/resources/static/emoji/wink.png and chat-2/src/main/resources/static/emoji/wink.png differ
+Binary files chat-1/src/main/resources/static/emoji/wolf.png and chat-2/src/main/resources/static/emoji/wolf.png differ
+Binary files chat-1/src/main/resources/static/emoji/woman.png and chat-2/src/main/resources/static/emoji/woman.png differ
+Binary files chat-1/src/main/resources/static/emoji/womans_clothes.png and chat-2/src/main/resources/static/emoji/womans_clothes.png differ
+Binary files chat-1/src/main/resources/static/emoji/womans_hat.png and chat-2/src/main/resources/static/emoji/womans_hat.png differ
+Binary files chat-1/src/main/resources/static/emoji/womens.png and chat-2/src/main/resources/static/emoji/womens.png differ
+Binary files chat-1/src/main/resources/static/emoji/worried.png and chat-2/src/main/resources/static/emoji/worried.png differ
+Binary files chat-1/src/main/resources/static/emoji/wrench.png and chat-2/src/main/resources/static/emoji/wrench.png differ
+Binary files chat-1/src/main/resources/static/emoji/x.png and chat-2/src/main/resources/static/emoji/x.png differ
+Binary files chat-1/src/main/resources/static/emoji/yellow_heart.png and chat-2/src/main/resources/static/emoji/yellow_heart.png differ
+Binary files chat-1/src/main/resources/static/emoji/yen.png and chat-2/src/main/resources/static/emoji/yen.png differ
+Binary files chat-1/src/main/resources/static/emoji/yum.png and chat-2/src/main/resources/static/emoji/yum.png differ
+Binary files chat-1/src/main/resources/static/emoji/zap.png and chat-2/src/main/resources/static/emoji/zap.png differ
+Binary files chat-1/src/main/resources/static/emoji/zero.png and chat-2/src/main/resources/static/emoji/zero.png differ
+Binary files chat-1/src/main/resources/static/emoji/zzz.png and chat-2/src/main/resources/static/emoji/zzz.png differ
+diff -Nuwr chat-1/src/main/resources/templates/application.html chat-2/src/main/resources/templates/application.html
+--- chat-1/src/main/resources/templates/application.html
++++ chat-2/src/main/resources/templates/application.html
+@@ -25,7 +25,14 @@
+         <div class="container load popup">
+             <h2 th:text="#{load.title}"></h2>
+         </div>
++        <div class="container help popup">
++            <h2 th:text="#{help.title}"></h2>
++            <div th:utext="#{help.text}"></div>
++        </div>
+         <div class="container chat">
++            <div class="extra">
++                <a href="#" class="help" th:text="#{chat.help}"></a>
++            </div>
+             <div class="channel">
+                 <ul class="channel_content"></ul>
+                 <div class="channel_type">
